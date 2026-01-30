@@ -7,25 +7,26 @@ Original file is located at
     https://colab.research.google.com/drive/1JB-CmcuowpNeJMqdYUapFeAUxzjdLm13
 """
 
-from google.colab import drive
-drive.mount('/content/drive')
 
-pip install streamlit qrcode
 
 import streamlit as st
 import pandas as pd
 import datetime
+import os
 
 # --- CONFIGURATION ---
 st.set_page_config(page_title="General Store Agent", layout="wide")
 
 # Load Inventory
+#def load_data():
+  #  return pd.read_csv('/content/drive/MyDrive/inventory.csv')
 def load_data():
-    return pd.read_csv('/content/drive/MyDrive/inventory.csv')
-
+    df = pd.read_csv('inventory.csv')
+    df.columns = df.columns.str.strip()  # This removes that hidden space
+    return df
 # --- APP LOGIC ---
-inventory = load_data()
-
+#@inventory = load_data()
+return pd.read_csv('inventory.csv')
 # Use 'query params' or a sidebar to switch between Customer and Owner view
 view = st.sidebar.radio("Go to:", ["Customer Ordering", "Owner Dashboard"])
 
