@@ -104,23 +104,23 @@ if view == "Customer: Shop Here":
         # 2. MATH: Calculate subtotal using the hidden raw numbers
         df_cart['Subtotal'] = df_cart['price'] * df_cart['qty']
         
-        # 3. FORMATTING: Create a version of the table for the customer to see
-        # We rename 'display_qty' to 'Quantity' so it shows '500g' or '1.5kg'
+        # 3. FORMATTING: Use the text labels (like '500g') for the table
+        # We use 'display_qty' so it shows '500g' instead of '0.5000'
         display_df = df_cart[['item', 'display_qty', 'Subtotal']].copy()
         display_df.columns = ['Item Name', 'Weight/Qty', 'Amount (₹)']
         
-        # Add Rupee symbol and 2 decimal places to the price for a professional look
+        # Format the Amount column to show 2 decimal places (e.g., ₹52.50)
         display_df['Amount (₹)'] = display_df['Amount (₹)'].map('₹{:.2f}'.format)
         
-        # Show the clean table
-        st.table(display_cart)
+        # FIXED: This now matches the name 'display_df' above
+        st.table(display_df)
         
-        # 4. TOTAL: Sum the raw subtotal column
+        # 4. TOTAL: Sum the raw numbers for the final bill
         total_bill = df_cart['Subtotal'].sum()
         st.write(f"## Total Bill: ₹{total_bill:,.2f}")
 
         if st.button("CONFIRM ORDER", type="primary", use_container_width=True):
-            # Save the clean format to your orders.csv so you see "500g" on your tablet
+            # Save the clean format to orders.csv
             new_order = pd.DataFrame([{
                 'Time': datetime.datetime.now().strftime("%H:%M:%S"),
                 'Items': ", ".join([f"{i['display_qty']} {i['item']}" for i in st.session_state.cart]),
@@ -130,7 +130,7 @@ if view == "Customer: Shop Here":
             
             st.success("Order Sent! Please wait at the counter.")
             st.session_state.cart = []
-            st.balloons()  
+            st.balloons()
 # Added a fun celebration effect!
 
 elif view == "Owner: Tablet Dashboard":
