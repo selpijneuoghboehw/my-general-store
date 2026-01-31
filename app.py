@@ -93,34 +93,27 @@ if view == "Customer: Shop Here":
                     })
                     st.toast(f"Added {display_text} {row['item_name']}")
 
-# --- Cart Summary (Always visible at the bottom if items exist) ---
+# --- Cart Summary ---
     if 'cart' in st.session_state and st.session_state.cart:
         st.divider()
         st.subheader("🛒 Your Selection")
         
-        # 1. Create the DataFrame from the cart
         df_cart = pd.DataFrame(st.session_state.cart)
-        
-        # 2. MATH: Calculate subtotal using the hidden raw numbers
         df_cart['Subtotal'] = df_cart['price'] * df_cart['qty']
         
-        # 3. FORMATTING: Use the text labels (like '500g') for the table
-        # We use 'display_qty' so it shows '500g' instead of '0.5000'
+        # This creates the clean table for the customer
         display_df = df_cart[['item', 'display_qty', 'Subtotal']].copy()
         display_df.columns = ['Item Name', 'Weight/Qty', 'Amount (₹)']
-        
-        # Format the Amount column to show 2 decimal places (e.g., ₹52.50)
         display_df['Amount (₹)'] = display_df['Amount (₹)'].map('₹{:.2f}'.format)
         
-        # FIXED: This now matches the name 'display_df' above
         st.table(display_df)
         
-        # 4. TOTAL: Sum the raw numbers for the final bill
         total_bill = df_cart['Subtotal'].sum()
         st.write(f"## Total Bill: ₹{total_bill:,.2f}")
 
-       if st.button("CONFIRM ORDER", type="primary", use_container_width=True):
-            # NEW MATH: We now include the price (@ ₹rate) in the string
+        # FIXED INDENTATION FOR CONFIRM BUTTON
+        if st.button("CONFIRM ORDER", type="primary", use_container_width=True):
+            # Save price info so Dashboard shows it
             order_items_string = ", ".join([
                 f"{i['display_qty']} {i['item']} (@ ₹{i['price']})" 
                 for i in st.session_state.cart
@@ -133,7 +126,6 @@ if view == "Customer: Shop Here":
             }])
             
             new_order.to_csv('orders.csv', mode='a', header=False, index=False)
-            
             st.success(f"Order for ₹{total_bill:.2f} Sent!")
             st.session_state.cart = []
             st.balloons()
