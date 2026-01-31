@@ -132,7 +132,6 @@ if view == "Customer: Shop Here":
             st.session_state.cart = []
             st.balloons()
 # Added a fun celebration effect!
-
 elif view == "Owner: Tablet Dashboard":
     st.header("📋 New Orders")
     
@@ -141,24 +140,31 @@ elif view == "Owner: Tablet Dashboard":
 
     if os.path.exists('orders.csv'):
         orders_df = pd.read_csv('orders.csv')
+        
         if not orders_df.empty:
-            # We will loop through each order to show a separate table for each one
             for index, row in orders_df.iloc[::-1].iterrows():
-                with st.expander(f"Order at {row['Time']} - Total: ₹{row['Total']}", expanded=True):
-                    # Convert the text string back into a list for the table
-                    item_list = row['Items'].split(", ")
+                with st.expander(f"Order at {row['Time']} — Total: ₹{row['Total']}", expanded=True):
                     
-                    # Create a clean table for this specific order
-                    order_data = []
-                    for item in item_list:
-                        qty, name = item.split("x ", 1)
-                        order_data.append({"Quantity": qty, "Product Name": name})
+                    item_list = str(row['Items']).split(", ")
+                    table_data = []
                     
-                    st.table(order_data)
+                    for entry in item_list:
+                        # FIXED: This check prevents the ValueError
+                        if "x " in entry:
+                            qty, name = entry.split("x ", 1)
+                        else:
+                            # This handles the new '500g' or '1kg' format
+                            parts = entry.split(" ", 1)
+                            qty = parts[0] if len(parts) > 1 else "1"
+                            name = parts[1] if len(parts) > 1 else entry
+                            
+                        table_data.append({"Quantity": qty, "Product": name})
+                    
+                    st.table(table_data)
             
             st.divider()
             if st.button("🗑️ Clear All Orders"):
                 pd.DataFrame(columns=['Time', 'Items', 'Total']).to_csv('orders.csv', index=False)
                 st.rerun()
         else:
-            st.info("No pending orders.")
+            st.info("No pending orders yet.")
