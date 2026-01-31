@@ -146,7 +146,6 @@ elif view == "Owner: Tablet Dashboard":
                     item_list = str(row['Items']).split(", ")
                     table_data = []
                     
-                    # Loop through items to build the 4-column table
                     for i, entry in enumerate(item_list, 1):
                         # Extract Weight/Qty and Name
                         if "x " in entry:
@@ -156,10 +155,10 @@ elif view == "Owner: Tablet Dashboard":
                             qty = parts[0] if len(parts) > 1 else "1"
                             name_part = parts[1] if len(parts) > 1 else entry
                         
-                        # Extract Price if it exists in the saved string (@ ₹100)
+                        # Extract Price from (@ ₹100) format
                         if "(@ ₹" in name_part:
-                            name, price = name_part.split("(@ ₹", 1)
-                            price = "₹" + price.replace(")", "")
+                            name, price_val = name_part.split("(@ ₹", 1)
+                            price = "₹" + price_val.replace(")", "")
                         else:
                             name = name_part
                             price = "N/A"
@@ -171,12 +170,9 @@ elif view == "Owner: Tablet Dashboard":
                             "Price/Unit": price
                         })
                     
-                    # Display the 4-column table
                     st.table(table_data)
             
             st.divider()
             if st.button("🗑️ Clear All Orders"):
                 pd.DataFrame(columns=['Time', 'Items', 'Total']).to_csv('orders.csv', index=False)
                 st.rerun()
-        else:
-            st.info("No pending orders yet.")
