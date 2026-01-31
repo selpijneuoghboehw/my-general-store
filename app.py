@@ -93,27 +93,45 @@ if view == "Customer: Shop Here":
                     })
                     st.toast(f"Added {display_text} {row['item_name']}")
 
-    # --- Cart Summary (Always visible at the bottom if items exist) ---
+# --- Cart Summary (Always visible at the bottom if items exist) ---
     if 'cart' in st.session_state and st.session_state.cart:
         st.divider()
         st.subheader("🛒 Your Selection")
-        df_cart = pd.DataFrame(st.session_state.cart)
-        df_cart['Subtotal'] = df_cart['price'] * df_cart['qty']
-        st.table(df_cart[['item', 'qty', 'Subtotal']])
         
+        # 1. Create the DataFrame from the cart
+        df_cart = pd.DataFrame(st.session_state.cart)
+        
+        # 2. MATH: Calculate subtotal using the hidden raw numbers
+        df_cart['Subtotal'] = df_cart['price'] * df_cart['qty']
+        
+        # 3. FORMATTING: Create a version of the table for the customer to see
+        # We rename 'display_qty' to 'Quantity' so it shows '500g' or '1.5kg'
+        display_df = df_cart[['item', 'display_qty', 'Subtotal']].copy()
+        display_df.columns = ['Item Name', 'Weight/Qty', 'Amount (₹)']
+        
+        # Add Rupee symbol and 2 decimal places to the price for a professional look
+        display_df['Amount (₹)'] = display_df['Amount (₹)'].map('₹{:.2f}'.format)
+        
+        # Show the clean table
+        st.table(display_cart)
+        
+        # 4. TOTAL: Sum the raw subtotal column
         total_bill = df_cart['Subtotal'].sum()
-        st.write(f"## Total Bill: ₹{total_bill}")
+        st.write(f"## Total Bill: ₹{total_bill:,.2f}")
 
         if st.button("CONFIRM ORDER", type="primary", use_container_width=True):
+            # Save the clean format to your orders.csv so you see "500g" on your tablet
             new_order = pd.DataFrame([{
                 'Time': datetime.datetime.now().strftime("%H:%M:%S"),
-                'Items': ", ".join([f"{i['qty']}x {i['item']}" for i in st.session_state.cart]),
+                'Items': ", ".join([f"{i['display_qty']} {i['item']}" for i in st.session_state.cart]),
                 'Total': total_bill
             }])
             new_order.to_csv('orders.csv', mode='a', header=False, index=False)
+            
             st.success("Order Sent! Please wait at the counter.")
             st.session_state.cart = []
-            st.balloons() # Added a fun celebration effect!
+            st.balloons()  
+# Added a fun celebration effect!
 
 elif view == "Owner: Tablet Dashboard":
     st.header("📋 New Orders")
