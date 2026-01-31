@@ -24,32 +24,55 @@ if not os.path.exists('orders.csv'):
 view = st.sidebar.radio("Switch View:", ["Customer: Shop Here", "Owner: Tablet Dashboard"])
 
 if view == "Customer: Shop Here":
-    st.header("🛒 Welcome to Our Store")
-    
-    if 'cart' not in st.session_state:
-        st.session_state.cart = []
+    st.title("Welcome To Sanjay Karyana Store")
+    st.divider()
 
-    # Display items by category
-    categories = inventory['category'].unique()
-    for cat in categories:
-        st.subheader(f"--- {cat} ---")
-        items_in_cat = inventory[inventory['category'] == cat]
+    # 1. Initialize 'selected_category' in session state if it doesn't exist
+    if 'selected_category' not in st.session_state:
+        st.session_state.selected_category = None
+
+    # 2. If no category is selected, show the "Main Menu"
+    if st.session_state.selected_category is None:
+        st.subheader("📂 Choose a Category to Start:")
         
-        for _, row in items_in_cat.iterrows():
-            col1, col2, col3 = st.columns([2, 1, 1])
-            col1.write(f"**{row['item_name']}**")
-            col2.write(f"₹{row['price']}")
-            
-            qty = col3.number_input("Qty", min_value=1, max_value=20, key=f"q_{row['item_name']}")
-            
-            if col3.button("Add", key=f"b_{row['item_name']}"):
-                st.session_state.cart.append({'item': row['item_name'], 'price': row['price'], 'qty': qty})
-                st.toast(f"Added {qty} {row['item_name']}")
+        all_categories = inventory['category'].unique()
+        
+        # Display categories as large buttons
+        for cat in all_categories:
+            if st.button(f"🛍️ {cat}", use_container_width=True, key=f"main_{cat}"):
+                st.session_state.selected_category = cat
+                st.rerun()
 
-    # Cart Summary
-    if st.session_state.cart:
+    # 3. If a category IS selected, show the items in that category
+    else:
+        col_back, col_title = st.columns([1, 3])
+        if col_back.button("⬅️ Back"):
+            st.session_state.selected_category = None
+            st.rerun()
+            
+        st.header(f"Category: {st.session_state.selected_category}")
+        
+        # Filter and display items
+        items_to_show = inventory[inventory['category'] == st.session_state.selected_category]
+        
+        for _, row in items_to_show.iterrows():
+            with st.container(border=True): # Adds a nice box around each item
+                col1, col2 = st.columns([2, 1])
+                col1.write(f"**{row['item_name']}**")
+                col1.write(f"Price: ₹{row['price']}")
+                
+                qty = col2.number_input("Qty", min_value=1, max_value=20, key=f"q_{row['item_name']}")
+                
+                if col2.button("Add to Cart", key=f"b_{row['item_name']}", use_container_width=True):
+                    if 'cart' not in st.session_state:
+                        st.session_state.cart = []
+                    st.session_state.cart.append({'item': row['item_name'], 'price': row['price'], 'qty': qty})
+                    st.toast(f"Added {qty} {row['item_name']}")
+
+    # --- Cart Summary (Always visible at the bottom if items exist) ---
+    if 'cart' in st.session_state and st.session_state.cart:
         st.divider()
-        st.subheader("Your Selection")
+        st.subheader("🛒 Your Selection")
         df_cart = pd.DataFrame(st.session_state.cart)
         df_cart['Subtotal'] = df_cart['price'] * df_cart['qty']
         st.table(df_cart[['item', 'qty', 'Subtotal']])
@@ -57,7 +80,7 @@ if view == "Customer: Shop Here":
         total_bill = df_cart['Subtotal'].sum()
         st.write(f"## Total Bill: ₹{total_bill}")
 
-        if st.button("CONFIRM ORDER"):
+        if st.button("CONFIRM ORDER", type="primary", use_container_width=True):
             new_order = pd.DataFrame([{
                 'Time': datetime.datetime.now().strftime("%H:%M:%S"),
                 'Items': ", ".join([f"{i['qty']}x {i['item']}" for i in st.session_state.cart]),
@@ -66,6 +89,7 @@ if view == "Customer: Shop Here":
             new_order.to_csv('orders.csv', mode='a', header=False, index=False)
             st.success("Order Sent! Please wait at the counter.")
             st.session_state.cart = []
+            st.balloons() # Added a fun celebration effect!
 
 elif view == "Owner: Tablet Dashboard":
     st.header("📋 New Orders")
