@@ -56,18 +56,55 @@ if view == "Customer: Shop Here":
         items_to_show = inventory[inventory['category'] == st.session_state.selected_category]
         
         for _, row in items_to_show.iterrows():
-            with st.container(border=True): # Adds a nice box around each item
-                col1, col2 = st.columns([2, 1])
-                col1.write(f"**{row['item_name']}**")
-                col1.write(f"Price: ₹{row['price']}")
+           # 3. If a category IS selected, show the items in that category
+        else:
+            col_back, col_title = st.columns([1, 3])
+            if col_back.button("⬅️ Back"):
+                st.session_state.selected_category = None
+                st.rerun()
                 
-                qty = col2.number_input("Qty", min_value=1, max_value=20, key=f"q_{row['item_name']}")
-                
-                if col2.button("Add to Cart", key=f"b_{row['item_name']}", use_container_width=True):
-                    if 'cart' not in st.session_state:
-                        st.session_state.cart = []
-                    st.session_state.cart.append({'item': row['item_name'], 'price': row['price'], 'qty': qty})
-                    st.toast(f"Added {qty} {row['item_name']}")
+            st.header(f"Category: {st.session_state.selected_category}")
+            
+            # Filter and display items
+            items_to_show = inventory[inventory['category'] == st.session_state.selected_category]
+            
+            for _, row in items_to_show.iterrows():
+                with st.container(border=True):
+                    col_info, col_controls = st.columns([2, 1])
+                    
+                    col_info.write(f"**{row['item_name']}**")
+                    col_info.write(f"Rate: ₹{row['price']}/kg")
+
+                    # UNIT SWITCHER LOGIC
+                    if st.session_state.selected_category == "Pulses":
+                        # Customer chooses kg or g
+                        unit = col_controls.radio("Unit", ["kg", "g"], key=f"u_{row['item_name']}", horizontal=True)
+                        
+                        if unit == "kg":
+                            qty = col_controls.number_input("Weight", min_value=0.1, max_value=20.0, step=0.1, key=f"q_{row['item_name']}")
+                            final_qty = qty
+                        else:
+                            qty = col_controls.number_input("Weight", min_value=50, max_value=950, step=50, key=f"q_{row['item_name']}")
+                            final_qty = qty / 1000  # MATH: Convert grams to kg for the bill
+                            
+                        display_text = f"{qty}{unit}"
+                    else:
+                        # For other items like Biscuits/Soap
+                        qty = col_controls.number_input("Qty", min_value=1, max_value=50, step=1, key=f"q_{row['item_name']}")
+                        final_qty = qty
+                        display_text = f"{qty} units"
+
+                    if col_controls.button("Add to Cart", key=f"b_{row['item_name']}", use_container_width=True):
+                        if 'cart' not in st.session_state:
+                            st.session_state.cart = []
+                        
+                        st.session_state.cart.append({
+                            'item': row['item_name'], 
+                            'price': float(row['price']), 
+                            'qty': final_qty,
+                            'display_qty': display_text
+                        })
+                        st.toast(f"Added {display_text} {row['item_name']}")
 
     # --- Cart Summary (Always visible at the bottom if items exist) ---
     if 'cart' in st.session_state and st.session_state.cart:
