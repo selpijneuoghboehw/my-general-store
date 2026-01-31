@@ -100,8 +100,21 @@ elif view == "Owner: Tablet Dashboard":
     if os.path.exists('orders.csv'):
         orders_df = pd.read_csv('orders.csv')
         if not orders_df.empty:
-            st.dataframe(orders_df.iloc[::-1], use_container_width=True)
+            # We will loop through each order to show a separate table for each one
+            for index, row in orders_df.iloc[::-1].iterrows():
+                with st.expander(f"Order at {row['Time']} - Total: ₹{row['Total']}", expanded=True):
+                    # Convert the text string back into a list for the table
+                    item_list = row['Items'].split(", ")
+                    
+                    # Create a clean table for this specific order
+                    order_data = []
+                    for item in item_list:
+                        qty, name = item.split("x ", 1)
+                        order_data.append({"Quantity": qty, "Product Name": name})
+                    
+                    st.table(order_data)
             
+            st.divider()
             if st.button("🗑️ Clear All Orders"):
                 pd.DataFrame(columns=['Time', 'Items', 'Total']).to_csv('orders.csv', index=False)
                 st.rerun()
