@@ -143,23 +143,37 @@ elif view == "Owner: Tablet Dashboard":
         
         if not orders_df.empty:
             for index, row in orders_df.iloc[::-1].iterrows():
-                with st.expander(f"Order at {row['Time']} — Total: ₹{row['Total']}", expanded=True):
+                with st.expander(f"Order at {row['Time']} — Total Bill: ₹{row['Total']}", expanded=True):
                     
                     item_list = str(row['Items']).split(", ")
                     table_data = []
                     
-                    for entry in item_list:
-                        # FIXED: This check prevents the ValueError
+                    # Loop through items to build the 4-column table
+                    for i, entry in enumerate(item_list, 1):
+                        # Extract Weight/Qty and Name
                         if "x " in entry:
-                            qty, name = entry.split("x ", 1)
+                            qty, name_part = entry.split("x ", 1)
                         else:
-                            # This handles the new '500g' or '1kg' format
                             parts = entry.split(" ", 1)
                             qty = parts[0] if len(parts) > 1 else "1"
-                            name = parts[1] if len(parts) > 1 else entry
-                            
-                        table_data.append({"Quantity": qty, "Product": name})
+                            name_part = parts[1] if len(parts) > 1 else entry
+                        
+                        # Extract Price if it exists in the saved string (@ ₹100)
+                        if "(@ ₹" in name_part:
+                            name, price = name_part.split("(@ ₹", 1)
+                            price = "₹" + price.replace(")", "")
+                        else:
+                            name = name_part
+                            price = "N/A"
+
+                        table_data.append({
+                            "S.No": i,
+                            "Product": name.strip(),
+                            "Quantity": qty,
+                            "Price/Unit": price
+                        })
                     
+                    # Display the 4-column table
                     st.table(table_data)
             
             st.divider()
