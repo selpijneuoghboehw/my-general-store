@@ -119,16 +119,22 @@ if view == "Customer: Shop Here":
         total_bill = df_cart['Subtotal'].sum()
         st.write(f"## Total Bill: ₹{total_bill:,.2f}")
 
-        if st.button("CONFIRM ORDER", type="primary", use_container_width=True):
-            # Save the clean format to orders.csv
+       if st.button("CONFIRM ORDER", type="primary", use_container_width=True):
+            # NEW MATH: We now include the price (@ ₹rate) in the string
+            order_items_string = ", ".join([
+                f"{i['display_qty']} {i['item']} (@ ₹{i['price']})" 
+                for i in st.session_state.cart
+            ])
+            
             new_order = pd.DataFrame([{
                 'Time': datetime.datetime.now().strftime("%H:%M:%S"),
-                'Items': ", ".join([f"{i['display_qty']} {i['item']}" for i in st.session_state.cart]),
+                'Items': order_items_string,
                 'Total': total_bill
             }])
+            
             new_order.to_csv('orders.csv', mode='a', header=False, index=False)
             
-            st.success("Order Sent! Please wait at the counter.")
+            st.success(f"Order for ₹{total_bill:.2f} Sent!")
             st.session_state.cart = []
             st.balloons()
 # Added a fun celebration effect!
