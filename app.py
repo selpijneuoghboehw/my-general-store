@@ -141,18 +141,17 @@ elif view == "Owner: Tablet Dashboard":
         
         if not orders_df.empty:
             for index, row in orders_df.iloc[::-1].iterrows():
+                # The expander header already shows the total for quick reference
                 with st.expander(f"Order at {row['Time']} — Total Bill: ₹{row['Total']}", expanded=True):
                     
                     item_list = str(row['Items']).split(", ")
                     table_data = []
                     
                     for i, entry in enumerate(item_list, 1):
-                        # Extract Weight/Qty and Name
                         parts = entry.split(" ", 1)
                         qty_str = parts[0] if len(parts) > 1 else "1"
                         name_part = parts[1] if len(parts) > 1 else entry
                         
-                        # Extract Price Rate
                         if "(@ ₹" in name_part:
                             name, price_val = name_part.split("(@ ₹", 1)
                             rate = float(price_val.replace(")", "").strip())
@@ -160,29 +159,33 @@ elif view == "Owner: Tablet Dashboard":
                             name = name_part
                             rate = 0.0
 
-                        # MATH: Calculate Subtotal for this specific row
-                        # Removes units like 'kg' or 'g' to do math
                         try:
                             num_qty = float(qty_str.replace('kg', '').replace('g', ''))
                             if 'g' in qty_str and 'kg' not in qty_str:
                                 num_qty = num_qty / 1000
                             subtotal = num_qty * rate
                         except:
-                            subtotal = rate # Fallback for simple units
+                            subtotal = rate
 
                         table_data.append({
                             "S.No": i,
                             "Product": name.strip(),
                             "Quantity": qty_str,
                             "Rate": f"₹{rate:.2f}",
-                            "Subtotal": f"₹{subtotal:.2f}" # This is the price customer paid
+                            "Subtotal": f"₹{subtotal:.2f}"
                         })
                     
-                    # Convert to DataFrame to hide the index column (the 0, 1, 2, 3)
+                    # Display the main table
                     df_display = pd.DataFrame(table_data)
-                    st.table(df_display.set_index('S.No')) # Sets S.No as the first column
+                    st.table(df_display.set_index('S.No'))
+                    
+                    # --- ADDED: GRAND TOTAL DISPLAY ---
+                    # This creates a clear summary line at the bottom of the table
+                    st.write(f"### 💰 Grand Total to Collect: ₹{row['Total']:.2f}")
             
             st.divider()
             if st.button("🗑️ Clear All Orders"):
                 pd.DataFrame(columns=['Time', 'Items', 'Total']).to_csv('orders.csv', index=False)
                 st.rerun()
+        else:
+            st.info("No pending orders yet.")
