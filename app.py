@@ -148,29 +148,39 @@ elif view == "Owner: Tablet Dashboard":
                     
                     for i, entry in enumerate(item_list, 1):
                         # Extract Weight/Qty and Name
-                        if "x " in entry:
-                            qty, name_part = entry.split("x ", 1)
-                        else:
-                            parts = entry.split(" ", 1)
-                            qty = parts[0] if len(parts) > 1 else "1"
-                            name_part = parts[1] if len(parts) > 1 else entry
+                        parts = entry.split(" ", 1)
+                        qty_str = parts[0] if len(parts) > 1 else "1"
+                        name_part = parts[1] if len(parts) > 1 else entry
                         
-                        # Extract Price from (@ ₹100) format
+                        # Extract Price Rate
                         if "(@ ₹" in name_part:
                             name, price_val = name_part.split("(@ ₹", 1)
-                            price = "₹" + price_val.replace(")", "")
+                            rate = float(price_val.replace(")", "").strip())
                         else:
                             name = name_part
-                            price = "N/A"
+                            rate = 0.0
+
+                        # MATH: Calculate Subtotal for this specific row
+                        # Removes units like 'kg' or 'g' to do math
+                        try:
+                            num_qty = float(qty_str.replace('kg', '').replace('g', ''))
+                            if 'g' in qty_str and 'kg' not in qty_str:
+                                num_qty = num_qty / 1000
+                            subtotal = num_qty * rate
+                        except:
+                            subtotal = rate # Fallback for simple units
 
                         table_data.append({
                             "S.No": i,
                             "Product": name.strip(),
-                            "Quantity": qty,
-                            "Price/Unit": price
+                            "Quantity": qty_str,
+                            "Rate": f"₹{rate:.2f}",
+                            "Subtotal": f"₹{subtotal:.2f}" # This is the price customer paid
                         })
                     
-                    st.table(table_data)
+                    # Convert to DataFrame to hide the index column (the 0, 1, 2, 3)
+                    df_display = pd.DataFrame(table_data)
+                    st.table(df_display.set_index('S.No')) # Sets S.No as the first column
             
             st.divider()
             if st.button("🗑️ Clear All Orders"):
