@@ -26,6 +26,15 @@ view = st.sidebar.radio("Switch View:", ["Customer: Shop Here", "Owner: Tablet D
 if view == "Customer: Shop Here":
     st.title("Welcome To Sanjay Karyana Store")
     st.divider()
+    #new line
+    
+    # NEW: Ask for the customer's name or token number
+    cust_name = st.text_input("👤 Enter Your Name :", placeholder="")
+    st.divider()
+
+    if not cust_name:
+        st.warning("Please enter your name above to start shopping.")
+        st.stop() # Prevents them from seeing items until name is entered
 
     # 1. Initialize 'selected_category' in session state if it doesn't exist
     if 'selected_category' not in st.session_state:
