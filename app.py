@@ -121,21 +121,19 @@ if view == "Customer: Shop Here":
         st.write(f"## Total Bill: ₹{total_bill:,.2f}")
 
         # FIXED INDENTATION FOR CONFIRM BUTTON
-        if st.button("CONFIRM ORDER", type="primary", use_container_width=True):
-            # Save price info so Dashboard shows it
-            order_items_string = ", ".join([
-                f"{i['display_qty']} {i['item']} (@ ₹{i['price']})" 
-                for i in st.session_state.cart
-            ])
+      if st.button("CONFIRM ORDER", type="primary", use_container_width=True):
+            order_items_string = ", ".join([f"{i['display_qty']} {i['item']} (@ ₹{i['price']})" for i in st.session_state.cart])
             
             new_order = pd.DataFrame([{
                 'Time': datetime.datetime.now().strftime("%H:%M:%S"),
+                'Customer': cust_name,  # SAVING THE NAME
                 'Items': order_items_string,
                 'Total': total_bill
             }])
             
+            # Make sure your CSV header is updated to: Time, Customer, Items, Total
             new_order.to_csv('orders.csv', mode='a', header=False, index=False)
-            st.success(f"Order for ₹{total_bill:.2f} Sent!")
+            st.success(f"Order for {cust_name} sent!")
             st.session_state.cart = []
             st.balloons()
 # Added a fun celebration effect!
@@ -149,9 +147,11 @@ elif view == "Owner: Tablet Dashboard":
         orders_df = pd.read_csv('orders.csv')
         
         if not orders_df.empty:
-            for index, row in orders_df.iloc[::-1].iterrows():
-                # The expander header already shows the total for quick reference
-                with st.expander(f"Order at {row['Time']} — Total Bill: ₹{row['Total']}", expanded=True):
+           # In your Owner Dashboard loop:
+for index, row in orders_df.iloc[::-1].iterrows():
+    # Now shows Customer Name + Time + Total
+    with st.expander(f"👤 {row['Customer']} | ⏰ {row['Time']} | 💰 ₹{row['Total']}", expanded=True):
+        # ... rest of your table code ...
                     
                     item_list = str(row['Items']).split(", ")
                     table_data = []
