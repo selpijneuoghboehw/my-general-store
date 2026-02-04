@@ -111,51 +111,66 @@ if view == "Customer: Shop Here":
 
 elif view == "Owner: Tablet Dashboard":
     st.header("📋 New Orders")
+    
     if st.button("🔄 Refresh Orders"):
         st.rerun()
 
     if os.path.exists('orders.csv'):
-        orders_df = pd.read_csv('orders.csv')
-        if not orders_df.empty:
-            for index, row in orders_df.iloc[::-1].iterrows():
-                header_text = f"👤 {row['Customer']} | ⏰ {row['Time']} | 💰 ₹{row['Total']}"
-                with st.expander(header_text, expanded=True):
-                    item_list = str(row['Items']).split(", ")
-                    table_data = []
-                    for i, entry in enumerate(item_list, 1):
-                        parts = entry.split(" ", 1)
-                        qty_str = parts[0] if len(parts) > 1 else "1"
-                        name_part = parts[1] if len(parts) > 1 else entry
-                        
-                        if "(@ ₹" in name_part:
-                            name, rate_val = name_part.split("(@ ₹", 1)
-                            rate = float(rate_val.replace(")", "").strip())
-                        else:
-                            name, rate = name_part, 0.0
-
-                        try:
-                            num_qty = float(qty_str.replace('kg', '').replace('g', ''))
-                            if 'g' in qty_str and 'kg' not in qty_str: num_qty /= 1000
-                            subtotal = num_qty * rate
-                        except:
-                            subtotal = rate
-
-                        table_data.append({
-                            "S.No": i,
-                            "Product": name.strip(),
-                            "Quantity": qty_str,
-                            "Rate": f"₹{rate:.2f}",
-                            "Subtotal": f"₹{subtotal:.2f}"
-                        })
-                    
-                    df_display = pd.DataFrame(table_data)
-                    st.table(df_display.set_index('S.No'))
-                    st.write(f"### 💰 Grand Total: ₹{row['Total']:.2f}")
+        try:
+            # SAFETY: on_bad_lines='warn' prevents the app from crashing if old rows exist
+            orders_df = pd.read_csv('orders.csv', on_bad_lines='warn')
             
-            st.divider()
-            if st.button("🗑️ Clear All Orders"):
+            if not orders_df.empty:
+                for index, row in orders_df.iloc[::-1].iterrows():
+                    # If 'Customer' column is missing in old rows, show 'Guest'
+                    cust_name = row['Customer'] if 'Customer' in row else "Guest"
+                    
+                    header_text = f"👤 {cust_name} | ⏰ {row['Time']} | 💰 ₹{row['Total']}"
+                    with st.expander(header_text, expanded=True):
+                        
+                        item_list = str(row['Items']).split(", ")
+                        table_data = []
+                        
+                        for i, entry in enumerate(item_list, 1):
+                            parts = entry.split(" ", 1)
+                            qty_str = parts[0] if len(parts) > 1 else "1"
+                            name_part = parts[1] if len(parts) > 1 else entry
+                            
+                            if "(@ ₹" in name_part:
+                                name, rate_val = name_part.split("(@ ₹", 1)
+                                rate = float(rate_val.replace(")", "").strip())
+                            else:
+                                name, rate = name_part, 0.0
+
+                            try:
+                                num_qty = float(qty_str.replace('kg', '').replace('g', ''))
+                                if 'g' in qty_str and 'kg' not in qty_str: num_qty /= 1000
+                                subtotal = num_qty * rate
+                            except:
+                                subtotal = rate
+
+                            table_data.append({
+                                "S.No": i,
+                                "Product": name.strip(),
+                                "Quantity": qty_str,
+                                "Rate": f"₹{rate:.2f}",
+                                "Subtotal": f"₹{subtotal:.2f}"
+                            })
+                        
+                        df_display = pd.DataFrame(table_data)
+                        st.table(df_display.set_index('S.No'))
+                        st.write(f"### 💰 Grand Total: ₹{row['Total']:.2f}")
+                
+                st.divider()
+                if st.button("🗑️ Clear All Orders"):
+                    # This resets the file with the correct 4 columns
+                    pd.DataFrame(columns=['Time', 'Customer', 'Items', 'Total']).to_csv('orders.csv', index=False)
+                    st.rerun()
+            else:
+                st.info("No pending orders.")
+        except Exception as e:
+            st.error("Error reading old orders. Please click 'Clear All Orders' below to reset.")
+            if st.button("🗑️ Reset Order File Now"):
                 pd.DataFrame(columns=['Time', 'Customer', 'Items', 'Total']).to_csv('orders.csv', index=False)
                 st.rerun()
-        else:
-            st.info("No pending orders.")
              
