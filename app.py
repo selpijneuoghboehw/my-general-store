@@ -24,7 +24,7 @@ view = st.sidebar.radio("", ["Customer: Shop Here", "Owner: Tablet Dashboard"])
 
 # --- CUSTOMER VIEW ---
 if view == "Customer: Shop Here":
-    st.title("🏪 Elevate Family Store")
+    st.title("🏪 Sanjay Karyana  Store")
     
     # Identify the customer
     cust_name = st.text_input("👤 Enter Your Name or Token Number:", placeholder="e.g., Rajesh")
@@ -111,23 +111,37 @@ if view == "Customer: Shop Here":
                 st.balloons()
 
 # --- OWNER DASHBOARD ---
+# --- OWNER DASHBOARD ---
 elif view == "Owner: Tablet Dashboard":
     st.header("📋 New Orders")
+    
+    # HARD RESET BUTTON - This will fix the "Order file is messy" error
+    if st.button("🚨 EMERGENCY RESET (Clear All Messy Data)"):
+        # This force-overwrites the file with the correct headers
+        df_reset = pd.DataFrame(columns=['Time', 'Customer', 'Items', 'Total'])
+        df_reset.to_csv('orders.csv', index=False)
+        st.success("File Reset! The 'messy' error should be gone now.")
+        st.rerun()
+
     if st.button("🔄 Refresh Orders"):
         st.rerun()
 
     if os.path.exists('orders.csv'):
         try:
-            # SAFETY: Handles the ParserError by skipping bad lines
-            orders_df = pd.read_csv('orders.csv', names=['Time', 'Customer', 'Items', 'Total'], on_bad_lines='skip')
+            # We use 'on_bad_lines' to prevent the parser error you saw
+            orders_df = pd.read_csv('orders.csv', on_bad_lines='skip')
             
             if not orders_df.empty:
                 for _, row in orders_df.iloc[::-1].iterrows():
-                    header = f"👤 {row['Customer']} | ⏰ {row['Time']} | 💰 ₹{row['Total']}"
+                    # Handle rows where customer name might be missing
+                    c_name = row['Customer'] if 'Customer' in row else "Guest"
+                    header = f"👤 {c_name} | ⏰ {row['Time']} | 💰 ₹{row['Total']}"
+                    
                     with st.expander(header, expanded=True):
                         items = str(row['Items']).split(", ")
                         table_data = []
                         for i, entry in enumerate(items, 1):
+                            # (Parsing logic for your table columns)
                             parts = entry.split(" ", 1)
                             q_str = parts[0] if len(parts) > 1 else "1"
                             name_part = parts[1] if len(parts) > 1 else entry
@@ -138,6 +152,7 @@ elif view == "Owner: Tablet Dashboard":
                             else:
                                 name, rate = name_part, 0.0
 
+                            # (Math for the Packing List)
                             try:
                                 n_qty = float(q_str.replace('kg', '').replace('g', ''))
                                 if 'g' in q_str and 'kg' not in q_str: n_qty /= 1000
@@ -145,19 +160,18 @@ elif view == "Owner: Tablet Dashboard":
                             except:
                                 sub = rate
 
-                            table_data.append({"S.No": i, "Product": name.strip(), "Quantity": q_str, "Rate": f"₹{rate:.2f}", "Subtotal": f"₹{sub:.2f}"})
+                            table_data.append({
+                                "S.No": i, 
+                                "Product": name.strip(), 
+                                "Quantity": q_str, 
+                                "Rate": f"₹{rate:.2f}", 
+                                "Subtotal": f"₹{sub:.2f}"
+                            })
                         
                         st.table(pd.DataFrame(table_data).set_index('S.No'))
                         st.write(f"### 💰 Grand Total: ₹{row['Total']:.2f}")
-                
-                st.divider()
-                if st.button("🗑️ Clear All Orders"):
-                    pd.DataFrame(columns=['Time', 'Customer', 'Items', 'Total']).to_csv('orders.csv', index=False)
-                    st.rerun()
             else:
                 st.info("No pending orders.")
-        except:
-            st.error("Order file is messy.")
-            if st.button("🗑️ Reset Order File"):
-                pd.DataFrame(columns=['Time', 'Customer', 'Items', 'Total']).to_csv('orders.csv', index=False)
-                st.rerun()
+        except Exception as e:
+            st.error(f"Error reading file: {e}")
+            st.warning("Click the Red Emergency Reset button above to fix this.")
