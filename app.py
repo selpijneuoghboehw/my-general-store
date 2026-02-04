@@ -17,7 +17,7 @@ def load_data():
 inventory = load_data()
 
 # 2. Setup Order Storage
-if not os.path.exists('orders.csv')
+if not os.path.exists('orders.csv'):
     pd.DataFrame(columns=['Time', 'Items', 'Total']).to_csv('orders.csv', index=False)
 
 # Sidebar for switching between Customer and Owner
