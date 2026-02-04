@@ -116,7 +116,7 @@ elif view == "Owner: Tablet Dashboard":
     st.header("📋 New Orders")
     
     # HARD RESET BUTTON - This will fix the "Order file is messy" error
-    if st.button("🚨 EMERGENCY RESET (Clear All Messy Data)"):
+    if st.button("Clear All Messy Data"):
         # This force-overwrites the file with the correct headers
         df_reset = pd.DataFrame(columns=['Time', 'Customer', 'Items', 'Total'])
         df_reset.to_csv('orders.csv', index=False)
