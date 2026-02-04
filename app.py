@@ -135,7 +135,7 @@ elif view == "Owner: Tablet Dashboard":
                 for _, row in orders_df.iloc[::-1].iterrows():
                     # Handle rows where customer name might be missing
                     c_name = row['Customer'] if 'Customer' in row else "Guest"
-                    header = f"👤 {c_name} | ⏰ {row['Time']} | 💰 ₹{row['Total']}"
+                    header = f"👤 {c_name} |  💰 ₹{row['Total']}"
                     
                     with st.expander(header, expanded=True):
                         items = str(row['Items']).split(", ")
