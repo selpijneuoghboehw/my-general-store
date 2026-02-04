@@ -22,21 +22,16 @@ if not os.path.exists('orders.csv'):
 
 # Sidebar for switching between Customer and Owner
 view = st.sidebar.radio("Switch View:", ["Customer: Shop Here", "Owner: Tablet Dashboard"])
-
 if view == "Customer: Shop Here":
-    st.title("Welcome To Sanjay Karyana Store")
-    
-             if view == "Customer: Shop Here":
-    st.title("🏪 Elevate Family Store")
+    st.title("Sanjay Karyana  Store")
     
     # Identify the customer
     cust_name = st.text_input("👤 Enter Your Name or Token Number:", placeholder="e.g., Rajesh")
     st.divider()
 
     if not cust_name:
-        st.info("👆 Please enter your name to see the items.")
+        st.info("👆 Please enter your name to start shopping.")
     else:
-        # Initialize selected category
         if 'selected_category' not in st.session_state:
             st.session_state.selected_category = None
 
@@ -86,7 +81,7 @@ if view == "Customer: Shop Here":
                         })
                         st.toast(f"Added {display_text} {row['item_name']}")
 
-        # --- Cart Summary (Indented correctly under 'else' of name check) ---
+        # --- Cart Summary (Correctly Indented) ---
         if 'cart' in st.session_state and st.session_state.cart:
             st.divider()
             st.subheader("🛒 Your Selection")
@@ -123,7 +118,6 @@ elif view == "Owner: Tablet Dashboard":
         orders_df = pd.read_csv('orders.csv')
         if not orders_df.empty:
             for index, row in orders_df.iloc[::-1].iterrows():
-                # Expander shows Customer Name, Time, and Total
                 header_text = f"👤 {row['Customer']} | ⏰ {row['Time']} | 💰 ₹{row['Total']}"
                 with st.expander(header_text, expanded=True):
                     item_list = str(row['Items']).split(", ")
@@ -139,7 +133,6 @@ elif view == "Owner: Tablet Dashboard":
                         else:
                             name, rate = name_part, 0.0
 
-                        # Math for packing list subtotal
                         try:
                             num_qty = float(qty_str.replace('kg', '').replace('g', ''))
                             if 'g' in qty_str and 'kg' not in qty_str: num_qty /= 1000
@@ -165,3 +158,4 @@ elif view == "Owner: Tablet Dashboard":
                 st.rerun()
         else:
             st.info("No pending orders.")
+             
