@@ -42,7 +42,7 @@ if view == "Customer: Shop Here":
                 if st.button(f"🛍️ {cat}", use_container_width=True, key=f"main_{cat}"):
                     st.session_state.selected_category = cat
                     st.rerun()
-        else:
+       else:
             if st.button("⬅️ Back to Categories"):
                 st.session_state.selected_category = None
                 st.rerun()
@@ -88,99 +88,81 @@ if view == "Customer: Shop Here":
             df_cart = pd.DataFrame(st.session_state.cart)
             df_cart['Subtotal'] = df_cart['price'] * df_cart['qty']
             
+            # Format the table for the customer
             display_df = df_cart[['item', 'display_qty', 'Subtotal']].copy()
             display_df.columns = ['Item Name', 'Weight/Qty', 'Amount (₹)']
             display_df['Amount (₹)'] = display_df['Amount (₹)'].map('₹{:.2f}'.format)
-            st.table(display_df)
+            
+            st.table(display_df) # Fixed: Matches display_df above
             
             total_bill = df_cart['Subtotal'].sum()
             st.write(f"## Total Bill: ₹{total_bill:,.2f}")
 
-          if st.button("CONFIRM ORDER", type="primary", use_container_width=True)
-                # Check if name was entered
-                if cust_name:
-                    order_string = ", ".join([f"{i['display_qty']} {i['item']} (@ ₹{i['price']})" for i in st.session_state.cart])
-                    
-                    # Create the data frame with the 'Customer' column
-                    new_order = pd.DataFrame([{
-                        'Time': datetime.datetime.now().strftime("%H:%M:%S"),
-                        'Customer': cust_name,  # THIS SAVES THE NAME
-                        'Items': order_string,
-                        'Total': total_bill
-                    }])
-                    
-                    # Save to CSV
-                    new_order.to_csv('orders.csv', mode='a', header=False, index=False)
-                    
-                    st.success(f"Order for {cust_name} sent!")
-                    st.session_state.cart = []
-                    st.balloons()
-                else:
-                    st.error("Please enter your name at the top before confirming!")
+            if st.button("CONFIRM ORDER", type="primary", use_container_width=True):
+                # Ensure customer name is included if you added that field
+                name_to_save = cust_name if 'cust_name' in locals() else "Guest"
+                
+                order_string = ", ".join([f"{i['display_qty']} {i['item']} (@ ₹{i['price']})" for i in st.session_state.cart])
+                new_order = pd.DataFrame([{
+                    'Time': datetime.datetime.now().strftime("%H:%M:%S"),
+                    'Customer': name_to_save,
+                    'Items': order_string,
+                    'Total': total_bill
+                }])
+                
+                new_order.to_csv('orders.csv', mode='a', header=False, index=False)
+                st.success("Order sent! Please wait at the counter.")
+                st.session_state.cart = []
+                st.balloons()
 
 elif view == "Owner: Tablet Dashboard":
     st.header("📋 New Orders")
-    
     if st.button("🔄 Refresh Orders"):
         st.rerun()
 
     if os.path.exists('orders.csv'):
-        try:
-            # SAFETY: on_bad_lines='warn' prevents the app from crashing if old rows exist
-            orders_df = pd.read_csv('orders.csv', on_bad_lines='warn')
-            
-            if not orders_df.empty:
-             for index, row in orders_df.iloc[::-1].iterrows():
-                    # Look for 'Customer' column; if empty or missing, then use "Guest"
-                    cust_display = row['Customer'] if 'Customer' in row and pd.notna(row['Customer']) else "Guest"
-                    
-                    header_text = f"👤 {cust_display} | ⏰ {row['Time']} | 💰 ₹{row['Total']}"
-                    with st.expander(header_text, expanded=True):
-                        # ... rest of your table code ...
-                        
-                        item_list = str(row['Items']).split(", ")
-                        table_data = []
-                        
-                        for i, entry in enumerate(item_list, 1):
-                            parts = entry.split(" ", 1)
-                            qty_str = parts[0] if len(parts) > 1 else "1"
-                            name_part = parts[1] if len(parts) > 1 else entry
-                            
-                            if "(@ ₹" in name_part:
-                                name, rate_val = name_part.split("(@ ₹", 1)
-                                rate = float(rate_val.replace(")", "").strip())
-                            else:
-                                name, rate = name_part, 0.0
-
-                            try:
-                                num_qty = float(qty_str.replace('kg', '').replace('g', ''))
-                                if 'g' in qty_str and 'kg' not in qty_str: num_qty /= 1000
-                                subtotal = num_qty * rate
-                            except:
-                                subtotal = rate
-
-                            table_data.append({
-                                "S.No": i,
-                                "Product": name.strip(),
-                                "Quantity": qty_str,
-                                "Rate": f"₹{rate:.2f}",
-                                "Subtotal": f"₹{subtotal:.2f}"
-                            })
-                        
-                        df_display = pd.DataFrame(table_data)
-                        st.table(df_display.set_index('S.No'))
-                        st.write(f"### 💰 Grand Total: ₹{row['Total']:.2f}")
+        # Safety read to prevent ParserError from old columns
+        orders_df = pd.read_csv('orders.csv', on_bad_lines='warn')
+        
+        if not orders_df.empty:
+            for index, row in orders_df.iloc[::-1].iterrows():
+                cust = row['Customer'] if 'Customer' in row else "Guest"
+                header = f"👤 {cust} | ⏰ {row['Time']} | 💰 ₹{row['Total']}"
                 
-                st.divider()
-                if st.button("🗑️ Clear All Orders"):
-                    # This resets the file with the correct 4 columns
-                    pd.DataFrame(columns=['Time', 'Customer', 'Items', 'Total']).to_csv('orders.csv', index=False)
-                    st.rerun()
-            else:
-                st.info("No pending orders.")
-        except Exception as e:
-            st.error("Error reading old orders. Please click 'Clear All Orders' below to reset.")
-            if st.button("🗑️ Reset Order File Now"):
+                with st.expander(header, expanded=True):
+                    item_list = str(row['Items']).split(", ")
+                    table_data = []
+                    for i, entry in enumerate(item_list, 1):
+                        parts = entry.split(" ", 1)
+                        qty_str = parts[0] if len(parts) > 1 else "1"
+                        name_part = parts[1] if len(parts) > 1 else entry
+                        
+                        if "(@ ₹" in name_part:
+                            name, rate_val = name_part.split("(@ ₹", 1)
+                            rate = float(rate_val.replace(")", "").strip())
+                        else:
+                            name, rate = name_part, 0.0
+
+                        try:
+                            num_qty = float(qty_str.replace('kg', '').replace('g', ''))
+                            if 'g' in qty_str and 'kg' not in qty_str: num_qty /= 1000
+                            subtotal = num_qty * rate
+                        except:
+                            subtotal = rate
+
+                        table_data.append({
+                            "S.No": i,
+                            "Product": name.strip(),
+                            "Quantity": qty_str,
+                            "Rate": f"₹{rate:.2f}",
+                            "Subtotal": f"₹{subtotal:.2f}"
+                        })
+                    
+                    df_display = pd.DataFrame(table_data)
+                    st.table(df_display.set_index('S.No'))
+                    st.write(f"### 💰 Grand Total: ₹{row['Total']:.2f}")
+            
+            st.divider()
+            if st.button("🗑️ Clear All Orders"):
                 pd.DataFrame(columns=['Time', 'Customer', 'Items', 'Total']).to_csv('orders.csv', index=False)
                 st.rerun()
-             
