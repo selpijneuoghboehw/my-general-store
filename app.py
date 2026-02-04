@@ -96,18 +96,27 @@ if view == "Customer: Shop Here":
             total_bill = df_cart['Subtotal'].sum()
             st.write(f"## Total Bill: ₹{total_bill:,.2f}")
 
-            if st.button("CONFIRM ORDER", type="primary", use_container_width=True):
-                order_string = ", ".join([f"{i['display_qty']} {i['item']} (@ ₹{i['price']})" for i in st.session_state.cart])
-                new_order = pd.DataFrame([{
-                    'Time': datetime.datetime.now().strftime("%H:%M:%S"),
-                    'Customer': cust_name,
-                    'Items': order_string,
-                    'Total': total_bill
-                }])
-                new_order.to_csv('orders.csv', mode='a', header=False, index=False)
-                st.success(f"Order for {cust_name} sent!")
-                st.session_state.cart = []
-                st.balloons()
+          if st.button("CONFIRM ORDER", type="primary", use_container_width=True):
+                # Check if name was entered
+                if cust_name:
+                    order_string = ", ".join([f"{i['display_qty']} {i['item']} (@ ₹{i['price']})" for i in st.session_state.cart])
+                    
+                    # Create the data frame with the 'Customer' column
+                    new_order = pd.DataFrame([{
+                        'Time': datetime.datetime.now().strftime("%H:%M:%S"),
+                        'Customer': cust_name,  # THIS SAVES THE NAME
+                        'Items': order_string,
+                        'Total': total_bill
+                    }])
+                    
+                    # Save to CSV
+                    new_order.to_csv('orders.csv', mode='a', header=False, index=False)
+                    
+                    st.success(f"Order for {cust_name} sent!")
+                    st.session_state.cart = []
+                    st.balloons()
+                else:
+                    st.error("Please enter your name at the top before confirming!")
 
 elif view == "Owner: Tablet Dashboard":
     st.header("📋 New Orders")
@@ -121,12 +130,13 @@ elif view == "Owner: Tablet Dashboard":
             orders_df = pd.read_csv('orders.csv', on_bad_lines='warn')
             
             if not orders_df.empty:
-                for index, row in orders_df.iloc[::-1].iterrows():
-                    # If 'Customer' column is missing in old rows, show 'Guest'
-                    cust_name = row['Customer'] if 'Customer' in row else "Guest"
+             for index, row in orders_df.iloc[::-1].iterrows():
+                    # Look for 'Customer' column; if empty or missing, then use "Guest"
+                    cust_display = row['Customer'] if 'Customer' in row and pd.notna(row['Customer']) else "Guest"
                     
-                    header_text = f"👤 {cust_name} | ⏰ {row['Time']} | 💰 ₹{row['Total']}"
+                    header_text = f"👤 {cust_display} | ⏰ {row['Time']} | 💰 ₹{row['Total']}"
                     with st.expander(header_text, expanded=True):
+                        # ... rest of your table code ...
                         
                         item_list = str(row['Items']).split(", ")
                         table_data = []
