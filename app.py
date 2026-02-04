@@ -96,7 +96,7 @@ if view == "Customer: Shop Here":
             total_bill = df_cart['Subtotal'].sum()
             st.write(f"## Total Bill: ₹{total_bill:,.2f}")
 
-          if st.button("CONFIRM ORDER", type="primary", use_container_width=True):
+          if st.button("CONFIRM ORDER", type="primary", use_container_width=True)
                 # Check if name was entered
                 if cust_name:
                     order_string = ", ".join([f"{i['display_qty']} {i['item']} (@ ₹{i['price']})" for i in st.session_state.cart])
