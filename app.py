@@ -114,31 +114,65 @@ if view == "Customer: Shop Here":
 elif view == "Owner: Tablet Dashboard":
     st.header("📋 New Orders")
     
-    # This button force-fixes the 'Total' column error
-    if st.button("Clear All Messy Data"):
-        df_reset = pd.DataFrame(columns=['Time', 'Customer', 'Items', 'Total'])
-        df_reset.to_csv('orders.csv', index=False)
+    # Refresh button to check for new customers
+    if st.button("🔄 Refresh Orders"):
         st.rerun()
 
     if os.path.exists('orders.csv'):
-        try:
-            # We explicitly tell pandas what the columns are to avoid the 'Total' error
-            orders_df = pd.read_csv('orders.csv')
-            
-            # Safety: If the file exists but columns are missing, force a reset
-            if 'Total' not in orders_df.columns:
-                st.warning("Order file format is old. Please click 'Clear All Messy Data' above.")
-                st.stop()
+        # Safety: skips lines that might be formatted incorrectly
+        orders_df = pd.read_csv('orders.csv', on_bad_lines='skip')
+        
+        if not orders_df.empty:
+            for index, row in orders_df.iloc[::-1].iterrows():
+                # HEADER: Shows Name and Total
+                cust = row['Customer'] if 'Customer' in row else "Guest"
+                header = f"👤 {cust} | 💰 ₹{row['Total']}"
+                
+                with st.expander(header, expanded=True):
+                    # 1. Split the text into individual items
+                    item_list = str(row['Items']).split(", ")
+                    table_data = []
+                    
+                    # 2. Extract details for each item to build the table
+                    for i, entry in enumerate(item_list, 1):
+                        parts = entry.split(" ", 1)
+                        qty_str = parts[0] if len(parts) > 1 else "1"
+                        name_part = parts[1] if len(parts) > 1 else entry
+                        
+                        # Look for the Rate (@ ₹) we saved earlier
+                        if "(@ ₹" in name_part:
+                            name, rate_val = name_part.split("(@ ₹", 1)
+                            rate = float(rate_val.replace(")", "").strip())
+                        else:
+                            name, rate = name_part, 0.0
 
-            if not orders_df.empty:
-                for index, row in orders_df.iloc[::-1].iterrows():
-                    # Your existing code to show the table...
-                    cust = row['Customer'] if 'Customer' in row else "Guest"
-                    header = f"👤 {cust} | 💰 ₹{row['Total']}"
-                    with st.expander(header, expanded=True):
-                        # (Insert your table logic here)
-                        pass
-            else:
-                st.info("No orders found. Try placing a test order!")
-        except Exception as e:
-            st.error(f"Error reading file: {e}")
+                        # MATH: Calculate subtotal for the packing list
+                        try:
+                            num_qty = float(qty_str.replace('kg', '').replace('g', ''))
+                            if 'g' in qty_str and 'kg' not in qty_str: 
+                                num_qty /= 1000
+                            subtotal = num_qty * rate
+                        except:
+                            subtotal = rate
+
+                        table_data.append({
+                            "S.No": i,
+                            "Product": name.strip(),
+                            "Quantity": qty_str,
+                            "Rate": f"₹{rate:.2f}",
+                            "Subtotal": f"₹{subtotal:.2f}"
+                        })
+                    
+                    # 3. SHOW THE TABLE: This is what was missing!
+                    df_display = pd.DataFrame(table_data)
+                    st.table(df_display.set_index('S.No'))
+                    
+                    # 4. Show a bold total at the bottom of the table
+                    st.write(f"### 💰 Grand Total to Collect: ₹{row['Total']:.2f}")
+            
+            st.divider()
+            if st.button("🗑️ Clear All Orders"):
+                pd.DataFrame(columns=['Time', 'Customer', 'Items', 'Total']).to_csv('orders.csv', index=False)
+                st.rerun()
+        else:
+            st.info("No pending orders.")
