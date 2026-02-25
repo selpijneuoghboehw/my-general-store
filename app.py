@@ -856,7 +856,7 @@ def main():
     <div class="store-header">
         <h1>🏪 Sanjay Karyana Store</h1>
         <p>Fresh &nbsp;·&nbsp; Trusted &nbsp;·&nbsp; Local</p>
-        <div class="badge">EST. 1985 &nbsp;·&nbsp; SHIMLA</div>
+        <div class="badge">EST. 2015 &nbsp;·&nbsp; Mashka</div>
     </div>
     """, unsafe_allow_html=True)
 
