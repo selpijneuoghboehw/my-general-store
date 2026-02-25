@@ -514,7 +514,7 @@ def customer_view(inventory: pd.DataFrame):
 
     customer_name = st.text_input(
         "Your Name",
-        placeholder="Enter your name to start shopping…",
+        placeholder="Enter your name to start shopping…(Enter your Mobile number also)...",
         key="customer_name_input",
         label_visibility="collapsed",
     )
