@@ -16,7 +16,7 @@ INVENTORY_FILE  = "inventory.csv"
 ORDERS_FILE     = "orders.csv"
 ORDERS_COLS     = ["Time", "Customer", "Items", "Total"]
 
-OWNER_PIN       = "1969"        # ← Change this to your preferred PIN
+OWNER_PIN       = "1234"        # ← Change this to your preferred PIN
 MAX_ATTEMPTS    = 5             # Wrong attempts before lockout
 LOCKOUT_SECONDS = 30            # Lockout duration in seconds
 
@@ -885,22 +885,35 @@ def parse_item_row(item_str: str) -> dict:
     rate_match = re.search(r"@\s*₹([\d.]+)", item_str)
     rate       = float(rate_match.group(1)) if rate_match else 0.0
     core       = re.sub(r"\(@\s*₹[\d.]+\)", "", item_str).strip()
-    qty_match  = re.match(r"^([\d.]+(?:kg|g|units)?)\s+(.*)", core)
+
+    # Handles: "500g Chana Dal", "1.5kg Rice", "2 units Soap", "2 Soap"
+    qty_match = re.match(r"^([\d.]+)\s*(kg|g|units)?\s+(.*)", core)
     if qty_match:
-        qty_str = qty_match.group(1).strip()
-        product = qty_match.group(2).strip()
+        num_str  = qty_match.group(1).strip()
+        unit_str = (qty_match.group(2) or "").strip()
+        product  = qty_match.group(3).strip()
     else:
-        qty_str = "1"
-        product = core
+        num_str  = "1"
+        unit_str = ""
+        product  = core
 
-    if "g" in qty_str and "kg" not in qty_str:
-        qty_num = float(re.sub(r"[^\d.]", "", qty_str)) / 1000
-    elif "kg" in qty_str:
-        qty_num = float(re.sub(r"[^\d.]", "", qty_str))
+    num_only = float(num_str) if num_str else 1.0
+    if unit_str == "g":
+        qty_num = num_only / 1000
+    elif unit_str == "kg":
+        qty_num = num_only
     else:
-        qty_num = float(re.sub(r"[^\d.]", "", qty_str) or "1")
+        qty_num = num_only
 
-    return {"product": product, "quantity": qty_str, "rate": rate, "subtotal": round(qty_num * rate, 2)}
+    # Clean display: "500g" / "1.5kg" / "2 units"
+    if unit_str == "units":
+        display_qty = f"{num_str} units"
+    elif unit_str in ("kg", "g"):
+        display_qty = f"{num_str}{unit_str}"
+    else:
+        display_qty = num_str
+
+    return {"product": product, "quantity": display_qty, "rate": rate, "subtotal": round(qty_num * rate, 2)}
 
 # ─── Owner Dashboard ───────────────────────────────────────────────────────────
 
