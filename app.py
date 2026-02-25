@@ -111,7 +111,7 @@ def init_state():
 def inject_css():
     st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Roboto:wght@300;400;500;700&display=swap');
 
     :root {
         --bg-base:       #0D0F14;
@@ -134,12 +134,16 @@ def inject_css():
     }
 
     html, body, [class*="css"], .stApp {
-        font-family: 'DM Sans', sans-serif !important;
+        font-family: 'Roboto', sans-serif !important;
         background-color: var(--bg-base) !important;
         color: var(--text-primary) !important;
     }
 
     #MainMenu, footer, header { visibility: hidden; }
+
+    /* Hide the sidebar collapse arrow — sidebar is unused */
+    [data-testid="collapsedControl"] { display: none !important; }
+    section[data-testid="stSidebar"]  { display: none !important; }
 
     .block-container {
         padding-top: 1.5rem !important;
@@ -170,7 +174,7 @@ def inject_css():
         pointer-events: none;
     }
     .store-header h1 {
-        font-family: 'Syne', sans-serif !important;
+        font-family: 'Inter', sans-serif !important;
         font-weight: 800;
         font-size: 2rem;
         color: var(--accent) !important;
@@ -195,7 +199,7 @@ def inject_css():
 
     /* ── Section Labels ───────────────── */
     .section-label {
-        font-family: 'Syne', sans-serif;
+        font-family: 'Inter', sans-serif;
         font-weight: 700; font-size: 1.05rem;
         color: var(--text-primary);
         margin: 1.4rem 0 0.8rem 0;
@@ -214,7 +218,7 @@ def inject_css():
         padding: 1.4rem 1.6rem; margin-bottom: 1.2rem;
     }
     .name-banner p {
-        font-family: 'Syne', sans-serif;
+        font-family: 'Inter', sans-serif;
         font-weight: 700; font-size: 1.1rem;
         color: var(--text-primary); margin: 0 0 0.8rem 0;
     }
@@ -225,7 +229,7 @@ def inject_css():
         border: 1px solid var(--border) !important;
         border-radius: 10px !important;
         color: var(--text-primary) !important;
-        font-family: 'DM Sans', sans-serif !important;
+        font-family: 'Roboto', sans-serif !important;
         padding: 0.6rem 1rem !important;
         transition: border-color .2s !important;
     }
@@ -240,7 +244,7 @@ def inject_css():
         border: 1px solid var(--border) !important;
         border-radius: 10px !important;
         color: var(--text-primary) !important;
-        font-family: 'DM Sans', sans-serif !important;
+        font-family: 'Roboto', sans-serif !important;
     }
     .stNumberInput input:focus {
         border-color: var(--accent) !important;
@@ -266,7 +270,7 @@ def inject_css():
     }
     .cat-card .cat-icon { font-size: 2.2rem; line-height: 1; margin-bottom: 0.5rem; }
     .cat-card .cat-name {
-        font-family: 'Syne', sans-serif;
+        font-family: 'Inter', sans-serif;
         font-weight: 700; font-size: 0.95rem; color: var(--text-primary);
     }
     .cat-card .cat-count { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
@@ -283,7 +287,7 @@ def inject_css():
         display: flex; align-items: baseline;
         justify-content: space-between; margin-bottom: 0.5rem;
     }
-    .item-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem; color: var(--text-primary); }
+    .item-name { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1rem; color: var(--text-primary); }
     .item-price-tag {
         background: var(--accent-glow); border: 1px solid var(--border-accent);
         color: var(--accent); font-size: 0.78rem; font-weight: 600;
@@ -292,7 +296,7 @@ def inject_css():
 
     /* ── Buttons base ─────────────────── */
     .stButton > button {
-        font-family: 'DM Sans', sans-serif !important;
+        font-family: 'Roboto', sans-serif !important;
         border-radius: 10px !important;
         transition: all .2s !important;
         font-weight: 500 !important;
@@ -323,7 +327,7 @@ def inject_css():
     .confirm-btn .stButton > button {
         background: linear-gradient(135deg, var(--green), #16A34A) !important;
         border: none !important; color: white !important;
-        font-family: 'Syne', sans-serif !important;
+        font-family: 'Inter', sans-serif !important;
         font-weight: 700 !important; font-size: 1rem !important;
         letter-spacing: 0.3px !important; border-radius: 12px !important;
         width: 100% !important; padding: 0.65rem 1rem !important;
@@ -354,8 +358,8 @@ def inject_css():
         border-radius: 12px; padding: 0.9rem 1.4rem;
         display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;
     }
-    .total-label { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 1rem; color: var(--text-secondary); }
-    .total-amount { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.5rem; color: var(--accent); text-shadow: 0 0 20px var(--accent-glow); }
+    .total-label { font-family: 'Inter', sans-serif; font-weight: 600; font-size: 1rem; color: var(--text-secondary); }
+    .total-amount { font-family: 'Inter', sans-serif; font-weight: 800; font-size: 1.5rem; color: var(--accent); text-shadow: 0 0 20px var(--accent-glow); }
 
     /* ── Dataframe ────────────────────── */
     .stDataFrame { border-radius: 12px !important; overflow: hidden !important; border: 1px solid var(--border) !important; }
@@ -371,7 +375,7 @@ def inject_css():
         border-radius: 14px !important; margin-bottom: 10px !important;
     }
     .stExpander:hover { border-color: var(--border-accent) !important; }
-    .stExpander summary { font-family: 'Syne', sans-serif !important; font-weight: 600 !important; color: var(--text-primary) !important; padding: 0.85rem 1.2rem !important; }
+    .stExpander summary { font-family: 'Inter', sans-serif !important; font-weight: 600 !important; color: var(--text-primary) !important; padding: 0.85rem 1.2rem !important; }
     .stExpander [data-testid="stExpanderDetails"] { background: var(--bg-elevated) !important; border-top: 1px solid var(--border) !important; padding: 1rem 1.2rem !important; }
 
     /* ── Sidebar ──────────────────────── */
@@ -379,7 +383,7 @@ def inject_css():
     section[data-testid="stSidebar"] * { color: var(--text-primary) !important; }
     section[data-testid="stSidebar"] hr { border-color: var(--border) !important; }
 
-    .sidebar-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.3rem; color: var(--accent) !important; margin-bottom: 4px; }
+    .sidebar-logo { font-family: 'Inter', sans-serif; font-weight: 800; font-size: 1.3rem; color: var(--accent) !important; margin-bottom: 4px; }
     .sidebar-sub { font-size: 0.75rem; color: var(--text-muted) !important; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 1.4rem; }
     .sidebar-nav-label { font-size: 0.72rem; font-weight: 600; color: var(--text-muted) !important; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 0.5rem; }
 
@@ -388,11 +392,46 @@ def inject_css():
     /* ── Owner stats ──────────────────── */
     .stat-strip { display: flex; gap: 14px; margin-bottom: 1.4rem; flex-wrap: wrap; }
     .stat-card { flex: 1; min-width: 120px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 1rem 1.2rem; }
-    .stat-card .stat-val { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.6rem; color: var(--accent); }
+    .stat-card .stat-val { font-family: 'Inter', sans-serif; font-weight: 800; font-size: 1.6rem; color: var(--accent); }
     .stat-card .stat-lbl { font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; margin-top: 2px; }
 
     .stCaption, small { color: var(--text-muted) !important; }
     [data-testid="stToast"] { background: var(--bg-elevated) !important; border: 1px solid var(--border-accent) !important; border-radius: 12px !important; color: var(--text-primary) !important; }
+
+    /* ── Tab navigation ───────────────── */
+    .stTabs [data-baseweb="tab-list"] {
+        background: var(--bg-card) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 14px !important;
+        padding: 5px 6px !important;
+        gap: 4px !important;
+        margin-bottom: 1.4rem !important;
+    }
+    .stTabs [data-baseweb="tab"] {
+        background: transparent !important;
+        border: none !important;
+        border-radius: 10px !important;
+        color: var(--text-muted) !important;
+        font-family: 'Inter', sans-serif !important;
+        font-weight: 600 !important;
+        font-size: 0.95rem !important;
+        padding: 0.55rem 1.4rem !important;
+        transition: all .18s ease !important;
+        white-space: nowrap !important;
+    }
+    .stTabs [data-baseweb="tab"]:hover {
+        color: var(--text-primary) !important;
+        background: var(--bg-elevated) !important;
+    }
+    .stTabs [aria-selected="true"] {
+        background: var(--accent) !important;
+        color: var(--bg-base) !important;
+        font-weight: 700 !important;
+        box-shadow: 0 2px 12px var(--accent-glow) !important;
+    }
+    /* Hide the default blue underline indicator */
+    .stTabs [data-baseweb="tab-highlight"] { display: none !important; }
+    .stTabs [data-baseweb="tab-border"]    { display: none !important; }
 
     /* ════════════════════════════════════
        PIN LOCK STYLES
@@ -420,7 +459,7 @@ def inject_css():
 
     /* Title & subtitle */
     .pin-title {
-        font-family: 'Syne', sans-serif;
+        font-family: 'Inter', sans-serif;
         font-weight: 800; font-size: 1.45rem;
         color: var(--text-primary);
         margin: 0 0 4px 0; text-align: center;
@@ -474,7 +513,7 @@ def inject_css():
         border: 1px solid var(--border);
         border-radius: 16px;
         display: flex; align-items: center; justify-content: center;
-        font-family: 'Syne', sans-serif;
+        font-family: 'Inter', sans-serif;
         font-weight: 700; font-size: 1.3rem;
         color: var(--text-primary);
         cursor: pointer;
@@ -500,7 +539,7 @@ def inject_css():
         background: linear-gradient(135deg, var(--accent), var(--accent-dim)) !important;
         border: none !important;
         color: var(--bg-base) !important;
-        font-family: 'Syne', sans-serif !important;
+        font-family: 'Inter', sans-serif !important;
         font-weight: 800 !important; font-size: 1rem !important;
         border-radius: 14px !important;
         padding: 0.65rem 2rem !important;
@@ -540,7 +579,7 @@ def inject_css():
     }
     .lockout-card .lc-icon { font-size: 1.8rem; margin-bottom: 0.4rem; }
     .lockout-card .lc-title {
-        font-family: 'Syne', sans-serif; font-weight: 700;
+        font-family: 'Inter', sans-serif; font-weight: 700;
         font-size: 1rem; color: var(--red); margin-bottom: 4px;
     }
     .lockout-card .lc-msg { font-size: 0.82rem; color: var(--text-muted); }
@@ -703,7 +742,7 @@ def customer_view(inventory: pd.DataFrame):
         return
 
     st.markdown(
-        f"<div style='font-family:DM Sans,sans-serif;font-size:0.9rem;color:#9AA0B8;margin-bottom:0.4rem;'>"
+        f"<div style='font-family:Inter,sans-serif;font-size:0.9rem;color:#9AA0B8;margin-bottom:0.4rem;'>"
         f"Welcome, <span style='color:#F5A623;font-weight:700'>{customer_name.strip()}</span> ✨</div>",
         unsafe_allow_html=True,
     )
@@ -967,29 +1006,19 @@ def main():
     </div>
     """, unsafe_allow_html=True)
 
-    with st.sidebar:
-        st.markdown('<div class="sidebar-logo">🛒 SKS</div>', unsafe_allow_html=True)
-        st.markdown('<div class="sidebar-sub">Sanjay Karyana Store</div>', unsafe_allow_html=True)
-        st.markdown('<div class="sidebar-nav-label">Navigate</div>', unsafe_allow_html=True)
-        view = st.radio(
-            "View",
-            ["Customer: Shop Here", "Owner: Tablet Dashboard"],
-            key="nav_view",
-            label_visibility="collapsed",
-        )
-        st.markdown("---")
-        # Show lock status indicator in sidebar
-        if view == "Owner: Tablet Dashboard":
-            if st.session_state.get("owner_authenticated"):
-                st.markdown("<small style='color:#22C55E'>🔓 Dashboard unlocked</small>", unsafe_allow_html=True)
-            else:
-                st.markdown("<small style='color:#5A6080'>🔒 Dashboard locked</small>", unsafe_allow_html=True)
-            st.markdown("---")
-        st.markdown("<small style='color:#5A6080'>v3.0 · Dark Edition<br>© 2025 Sanjay Karyana</small>", unsafe_allow_html=True)
+    # ── Tab navigation — always visible, no sidebar needed ──────────────────
+    lock_indicator = (
+        " 🔓" if st.session_state.get("owner_authenticated") else " 🔒"
+    )
+    tab_customer, tab_owner = st.tabs([
+        "🛍️  Shop Here",
+        f"📊  Owner Dashboard{lock_indicator}",
+    ])
 
-    if view == "Customer: Shop Here":
+    with tab_customer:
         customer_view(inventory)
-    else:
+
+    with tab_owner:
         owner_view()
 
 
