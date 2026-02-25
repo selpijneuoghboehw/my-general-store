@@ -16,7 +16,7 @@ INVENTORY_FILE  = "inventory.csv"
 ORDERS_FILE     = "orders.csv"
 ORDERS_COLS     = ["Time", "Customer", "Items", "Total"]
 
-OWNER_PIN       = "1234"        # ← Change this to your preferred PIN
+OWNER_PIN       = "1969"        # ← Change this to your preferred PIN
 MAX_ATTEMPTS    = 5             # Wrong attempts before lockout
 LOCKOUT_SECONDS = 30            # Lockout duration in seconds
 
