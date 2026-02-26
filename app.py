@@ -52,6 +52,12 @@ def load_inventory() -> pd.DataFrame:
     for col in ["item_name", "category", "price"]:
         if col not in df.columns:
             df[col] = ""
+    # Sanitise: fill blanks, ensure price is numeric
+    df["item_name"] = df["item_name"].fillna("").astype(str).str.strip()
+    df["category"]  = df["category"].fillna("Uncategorised").astype(str).str.strip()
+    df["price"]     = pd.to_numeric(df["price"], errors="coerce").fillna(0.0)
+    # Drop rows with no item name
+    df = df[df["item_name"] != ""].reset_index(drop=True)
     return df
 
 
@@ -833,11 +839,14 @@ def customer_view(inventory: pd.DataFrame):
         unsafe_allow_html=True,
     )
 
-    categories = sorted(inventory["category"].unique().tolist())
+    categories = sorted(inventory["category"].dropna().astype(str).unique().tolist())
 
     # ── Category grid ──────────────────────────────────────────────────────────
     if st.session_state.selected_category is None:
         st.markdown('<div class="section-label">Browse Categories</div>', unsafe_allow_html=True)
+        if not categories:
+            st.info("No inventory items found. Ask the owner to add items.")
+            return
         cols = st.columns(min(4, len(categories)))
         for idx, cat in enumerate(categories):
             icon     = CAT_ICONS.get(cat, "📦")
@@ -1016,7 +1025,7 @@ def inventory_manager():
     )
     st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
 
-    categories = sorted(inv["category"].unique().tolist())
+    categories = sorted(inv["category"].dropna().astype(str).unique().tolist())
     updated_rows = []
 
     for cat in categories:
@@ -1065,7 +1074,7 @@ def inventory_manager():
     # ── ADD NEW ITEM ───────────────────────────────────────────────────────────
     st.markdown('<div class="section-label">➕ Add New Item</div>', unsafe_allow_html=True)
 
-    existing_categories = sorted(inv["category"].unique().tolist())
+    existing_categories = sorted(inv["category"].dropna().astype(str).unique().tolist())
 
     col1, col2 = st.columns(2)
     with col1:
