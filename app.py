@@ -398,6 +398,50 @@ def inject_css():
     .stCaption, small { color: var(--text-muted) !important; }
     [data-testid="stToast"] { background: var(--bg-elevated) !important; border: 1px solid var(--border-accent) !important; border-radius: 12px !important; color: var(--text-primary) !important; }
 
+    /* ── Inventory Manager ────────────── */
+    .inv-item-label {
+        font-size: 0.95rem;
+        font-weight: 500;
+        color: var(--text-primary);
+        padding: 0.45rem 0;
+        border-bottom: 1px solid var(--border);
+    }
+    .inv-save-btn .stButton > button {
+        background: linear-gradient(135deg, var(--accent), var(--accent-dim)) !important;
+        border: none !important;
+        color: var(--bg-base) !important;
+        font-weight: 700 !important;
+        font-size: 0.95rem !important;
+        border-radius: 12px !important;
+        padding: 0.6rem 1rem !important;
+        box-shadow: 0 4px 16px var(--accent-glow) !important;
+    }
+    .inv-save-btn .stButton > button:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 8px 22px rgba(245,166,35,0.4) !important;
+    }
+    .inv-add-btn .stButton > button {
+        background: var(--bg-elevated) !important;
+        border: 1px solid var(--border-accent) !important;
+        color: var(--accent) !important;
+        font-weight: 600 !important;
+        font-size: 0.95rem !important;
+        border-radius: 12px !important;
+        padding: 0.6rem 1rem !important;
+    }
+    .inv-add-btn .stButton > button:hover {
+        background: var(--accent) !important;
+        color: var(--bg-base) !important;
+        box-shadow: 0 4px 14px rgba(245,166,35,0.3) !important;
+    }
+    .stSelectbox > div > div {
+        background: var(--bg-elevated) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 10px !important;
+        color: var(--text-primary) !important;
+    }
+    .stSelectbox label { color: var(--text-secondary) !important; font-size: 0.85rem !important; }
+
     /* ── Tab navigation ───────────────── */
     .stTabs [data-baseweb="tab-list"] {
         background: var(--bg-card) !important;
@@ -917,13 +961,171 @@ def parse_item_row(item_str: str) -> dict:
 
 # ─── Owner Dashboard ───────────────────────────────────────────────────────────
 
+def inventory_manager():
+    """Inventory editor — update prices & add new items."""
+    inv = load_inventory()
+
+    # ── UPDATE PRICES ──────────────────────────────────────────────────────────
+    st.markdown('<div class="section-label">✏️ Update Prices</div>', unsafe_allow_html=True)
+    st.markdown(
+        "<small style='color:var(--text-muted)'>Edit any price below then click "
+        "<b style='color:var(--accent)'>Save All Changes</b>.</small>",
+        unsafe_allow_html=True,
+    )
+    st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+
+    categories = sorted(inv["category"].unique().tolist())
+    updated_rows = []
+
+    for cat in categories:
+        icon = CAT_ICONS.get(cat, "📦")
+        st.markdown(
+            f"<div style='font-family:Inter,sans-serif;font-weight:700;"
+            f"font-size:0.82rem;color:var(--text-muted);text-transform:uppercase;"
+            f"letter-spacing:1px;margin:1rem 0 0.4rem 0'>{icon} {cat}</div>",
+            unsafe_allow_html=True,
+        )
+        cat_items = inv[inv["category"] == cat].reset_index(drop=True)
+        for _, row in cat_items.iterrows():
+            item_name  = str(row["item_name"])
+            item_price = float(row["price"])
+            c_name, c_price = st.columns([3, 1])
+            with c_name:
+                st.markdown(
+                    f"<div class='inv-item-label'>{item_name}</div>",
+                    unsafe_allow_html=True,
+                )
+            with c_price:
+                new_price = st.number_input(
+                    "Price",
+                    min_value=0.0,
+                    value=item_price,
+                    step=0.5,
+                    key=f"inv_price_{item_name}",
+                    label_visibility="collapsed",
+                )
+            updated_rows.append({
+                "item_name": item_name,
+                "category":  cat,
+                "price":     new_price,
+            })
+
+    st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+    st.markdown('<div class="inv-save-btn">', unsafe_allow_html=True)
+    if st.button("💾  Save All Price Changes", key="save_prices", use_container_width=True):
+        pd.DataFrame(updated_rows).to_csv(INVENTORY_FILE, index=False)
+        st.success("✅ Prices updated successfully!")
+        st.rerun()
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # ── ADD NEW ITEM ───────────────────────────────────────────────────────────
+    st.markdown('<div class="section-label">➕ Add New Item</div>', unsafe_allow_html=True)
+
+    existing_categories = sorted(inv["category"].unique().tolist())
+
+    col1, col2 = st.columns(2)
+    with col1:
+        new_name = st.text_input(
+            "Item Name",
+            placeholder="e.g. Urad Dal",
+            key="new_item_name",
+        )
+    with col2:
+        new_price_val = st.number_input(
+            "Price (₹ per kg or unit)",
+            min_value=0.0,
+            value=50.0,
+            step=0.5,
+            key="new_item_price",
+        )
+
+    col3, col4 = st.columns(2)
+    with col3:
+        cat_choice = st.selectbox(
+            "Category",
+            options=existing_categories + ["➕ New Category…"],
+            key="new_item_cat_select",
+        )
+    with col4:
+        if cat_choice == "➕ New Category…":
+            new_cat_name = st.text_input(
+                "New Category Name",
+                placeholder="e.g. Dairy",
+                key="new_cat_name",
+            )
+        else:
+            new_cat_name = ""
+            st.markdown(
+                f"<div style='padding:0.45rem 0 0 0;color:var(--text-muted);font-size:0.85rem;'>"
+                f"Category: <span style='color:var(--accent);font-weight:600'>{cat_choice}</span></div>",
+                unsafe_allow_html=True,
+            )
+
+    final_category = new_cat_name.strip() if cat_choice == "➕ New Category…" else cat_choice
+
+    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+    st.markdown('<div class="inv-add-btn">', unsafe_allow_html=True)
+    if st.button("➕  Add Item to Inventory", key="add_new_item", use_container_width=True):
+        if not new_name.strip():
+            st.error("Please enter an item name.")
+        elif not final_category:
+            st.error("Please enter a category name.")
+        elif new_name.strip().lower() in inv["item_name"].str.lower().tolist():
+            st.warning(f"'{new_name.strip()}' already exists in inventory.")
+        else:
+            new_row = pd.DataFrame([{
+                "item_name": new_name.strip(),
+                "category":  final_category,
+                "price":     new_price_val,
+            }])
+            updated_inv = pd.concat([inv, new_row], ignore_index=True)
+            updated_inv.to_csv(INVENTORY_FILE, index=False)
+            st.success(f"✅ '{new_name.strip()}' added to {final_category} at ₹{new_price_val}!")
+            st.rerun()
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # ── DELETE ITEM ────────────────────────────────────────────────────────────
+    st.markdown('<div class="section-label">🗑️ Remove Item</div>', unsafe_allow_html=True)
+
+    all_items = inv["item_name"].tolist()
+    del_col1, del_col2 = st.columns([3, 1])
+    with del_col1:
+        item_to_delete = st.selectbox(
+            "Select item to remove",
+            options=["— select —"] + all_items,
+            key="del_item_select",
+            label_visibility="collapsed",
+        )
+    with del_col2:
+        st.markdown('<div class="clear-btn">', unsafe_allow_html=True)
+        if st.button("🗑️ Remove", key="delete_item", use_container_width=True):
+            if item_to_delete == "— select —":
+                st.error("Please select an item first.")
+            else:
+                updated_inv = inv[inv["item_name"] != item_to_delete].reset_index(drop=True)
+                updated_inv.to_csv(INVENTORY_FILE, index=False)
+                st.success(f"✅ '{item_to_delete}' removed from inventory.")
+                st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # ── CURRENT INVENTORY TABLE ────────────────────────────────────────────────
+    st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+    st.markdown('<div class="section-label">📦 Current Inventory</div>', unsafe_allow_html=True)
+    display_inv = inv[["item_name", "category", "price"]].copy()
+    display_inv.columns = ["Item", "Category", "Price (₹)"]
+    st.dataframe(display_inv, use_container_width=True, hide_index=True)
+
+
 def owner_view():
     # ── PIN gate ───────────────────────────────────────────────────────────────
     if not pin_lock_screen():
-        return   # Not authenticated → PIN screen already rendered, stop here
+        return
 
     # ── Authenticated — show dashboard ─────────────────────────────────────────
-    # Lock button (top-right)
     _, lock_col = st.columns([8, 1])
     with lock_col:
         st.markdown('<div class="lock-btn">', unsafe_allow_html=True)
@@ -963,40 +1165,45 @@ def owner_view():
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown('<div class="section-label">📋 Order History</div>', unsafe_allow_html=True)
+    # ── Owner sub-tabs ─────────────────────────────────────────────────────────
+    tab_orders, tab_inventory = st.tabs(["📋  Order History", "📦  Manage Inventory"])
 
-    st.markdown('<div class="clear-btn">', unsafe_allow_html=True)
-    if st.button("🗑️  Clear All Messy Data", key="clear_orders"):
-        clear_orders()
-        st.success("Order data cleared and reset.")
-        st.rerun()
-    st.markdown("</div>", unsafe_allow_html=True)
+    # ── Orders tab ─────────────────────────────────────────────────────────────
+    with tab_orders:
+        st.markdown('<div class="section-label">📋 Order History</div>', unsafe_allow_html=True)
+        st.markdown('<div class="clear-btn">', unsafe_allow_html=True)
+        if st.button("🗑️  Clear All Messy Data", key="clear_orders"):
+            clear_orders()
+            st.success("Order data cleared and reset.")
+            st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    if orders.empty:
-        st.markdown("<small>No orders recorded yet. Confirmed orders will appear here.</small>", unsafe_allow_html=True)
-        return
+        if orders.empty:
+            st.markdown("<small>No orders recorded yet. Confirmed orders will appear here.</small>", unsafe_allow_html=True)
+        else:
+            for _, order in orders.iloc[::-1].reset_index(drop=True).iterrows():
+                customer  = str(order.get("Customer", "Guest") or "Guest").strip() or "Guest"
+                total_val = order.get("Total", "0")
+                items_str = str(order.get("Items", ""))
+                time_str  = str(order.get("Time", "—"))
+                try:
+                    total_disp = f"₹{float(total_val):.2f}"
+                except (ValueError, TypeError):
+                    total_disp = "₹—"
+                with st.expander(f"👤  {customer}   ·   💰 {total_disp}   ·   🕐 {time_str}"):
+                    item_parts = [p.strip() for p in items_str.split(",") if p.strip()]
+                    rows = []
+                    for sno, part in enumerate(item_parts, start=1):
+                        p = parse_item_row(part)
+                        rows.append({"S.No": sno, "Product": p["product"], "Quantity": p["quantity"], "Rate": f"₹{p['rate']:.2f}", "Subtotal": f"₹{p['subtotal']:.2f}"})
+                    if rows:
+                        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+                    else:
+                        st.caption("(No item details could be parsed)")
 
-    for _, order in orders.iloc[::-1].reset_index(drop=True).iterrows():
-        customer  = str(order.get("Customer", "Guest") or "Guest").strip() or "Guest"
-        total_val = order.get("Total", "0")
-        items_str = str(order.get("Items", ""))
-        time_str  = str(order.get("Time", "—"))
-
-        try:
-            total_disp = f"₹{float(total_val):.2f}"
-        except (ValueError, TypeError):
-            total_disp = "₹—"
-
-        with st.expander(f"👤  {customer}   ·   💰 {total_disp}   ·   🕐 {time_str}"):
-            item_parts = [p.strip() for p in items_str.split(",") if p.strip()]
-            rows = []
-            for sno, part in enumerate(item_parts, start=1):
-                p = parse_item_row(part)
-                rows.append({"S.No": sno, "Product": p["product"], "Quantity": p["quantity"], "Rate": f"₹{p['rate']:.2f}", "Subtotal": f"₹{p['subtotal']:.2f}"})
-            if rows:
-                st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
-            else:
-                st.caption("(No item details could be parsed)")
+    # ── Inventory tab ──────────────────────────────────────────────────────────
+    with tab_inventory:
+        inventory_manager()
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
