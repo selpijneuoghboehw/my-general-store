@@ -101,6 +101,8 @@ def init_state():
         "pin_locked_until":   0.0,       # epoch timestamp when lockout ends
         "pin_shake":          False,     # trigger shake animation on wrong PIN
         "pin_message":        "",        # feedback message below dots
+        "editing_order_idx":  None,      # original CSV row index being edited
+        "edit_items":         [],        # list of parsed item dicts for that order
     }
     for key, val in defaults.items():
         if key not in st.session_state:
@@ -397,6 +399,46 @@ def inject_css():
 
     .stCaption, small { color: var(--text-muted) !important; }
     [data-testid="stToast"] { background: var(--bg-elevated) !important; border: 1px solid var(--border-accent) !important; border-radius: 12px !important; color: var(--text-primary) !important; }
+
+    /* ── Order Edit Panel ────────────── */
+    .edit-panel {
+        background: var(--bg-base);
+        border: 1px solid var(--border-accent);
+        border-radius: 14px;
+        padding: 1.1rem 1.3rem;
+        margin-top: 0.8rem;
+    }
+    .edit-panel-title {
+        font-family: "Inter", sans-serif;
+        font-weight: 700;
+        font-size: 0.95rem;
+        color: var(--accent);
+        margin-bottom: 0.8rem;
+    }
+    .edit-total-row {
+        background: var(--bg-elevated);
+        border: 1px solid var(--border-accent);
+        border-radius: 10px;
+        padding: 0.6rem 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.9rem;
+    }
+    .remove-item-btn .stButton > button {
+        background: transparent !important;
+        border: 1px solid rgba(239,68,68,0.35) !important;
+        color: var(--red) !important;
+        font-size: 0.78rem !important;
+        padding: 0.2rem 0.5rem !important;
+        border-radius: 7px !important;
+        min-width: 32px !important;
+        line-height: 1 !important;
+    }
+    .remove-item-btn .stButton > button:hover {
+        background: rgba(239,68,68,0.12) !important;
+        border-color: var(--red) !important;
+    }
 
     /* ── Inventory Manager ────────────── */
     .inv-item-label {
@@ -1174,6 +1216,8 @@ def owner_view():
         st.markdown('<div class="clear-btn">', unsafe_allow_html=True)
         if st.button("🗑️  Clear All Messy Data", key="clear_orders"):
             clear_orders()
+            st.session_state.editing_order_idx = None
+            st.session_state.edit_items        = []
             st.success("Order data cleared and reset.")
             st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
@@ -1181,7 +1225,11 @@ def owner_view():
         if orders.empty:
             st.markdown("<small>No orders recorded yet. Confirmed orders will appear here.</small>", unsafe_allow_html=True)
         else:
-            for _, order in orders.iloc[::-1].reset_index(drop=True).iterrows():
+            inv = load_inventory()
+            # Show orders newest-first; keep original CSV index for editing
+            orders_rev = orders.iloc[::-1].reset_index()  # 'index' col = original CSV row
+            for _, order in orders_rev.iterrows():
+                orig_idx  = int(order["index"])
                 customer  = str(order.get("Customer", "Guest") or "Guest").strip() or "Guest"
                 total_val = order.get("Total", "0")
                 items_str = str(order.get("Items", ""))
@@ -1190,16 +1238,209 @@ def owner_view():
                     total_disp = f"₹{float(total_val):.2f}"
                 except (ValueError, TypeError):
                     total_disp = "₹—"
+
                 with st.expander(f"👤  {customer}   ·   💰 {total_disp}   ·   🕐 {time_str}"):
                     item_parts = [p.strip() for p in items_str.split(",") if p.strip()]
                     rows = []
                     for sno, part in enumerate(item_parts, start=1):
                         p = parse_item_row(part)
-                        rows.append({"S.No": sno, "Product": p["product"], "Quantity": p["quantity"], "Rate": f"₹{p['rate']:.2f}", "Subtotal": f"₹{p['subtotal']:.2f}"})
+                        rows.append({"S.No": sno, "Product": p["product"], "Quantity": p["quantity"],
+                                     "Rate": f"₹{p['rate']:.2f}", "Subtotal": f"₹{p['subtotal']:.2f}"})
                     if rows:
                         st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
                     else:
                         st.caption("(No item details could be parsed)")
+
+                    # ── Edit button ─────────────────────────────────────────
+                    st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+                    ecol1, ecol2 = st.columns([1, 5])
+                    with ecol1:
+                        st.markdown('<div class="inv-add-btn">', unsafe_allow_html=True)
+                        if st.button("✏️ Edit Order", key=f"edit_btn_{orig_idx}"):
+                            # Load current items into editor state
+                            st.session_state.editing_order_idx = orig_idx
+                            st.session_state.edit_items = [
+                                parse_item_row(p.strip())
+                                for p in items_str.split(",") if p.strip()
+                            ]
+                            st.rerun()
+                        st.markdown("</div>", unsafe_allow_html=True)
+
+                    # ── Inline editor (only shown for this order) ───────────
+                    if st.session_state.editing_order_idx == orig_idx:
+                        edit_items = st.session_state.edit_items
+                        st.markdown('<div class="edit-panel">', unsafe_allow_html=True)
+                        st.markdown('<div class="edit-panel-title">✏️ Editing Order</div>', unsafe_allow_html=True)
+
+                        # ── Remove existing items ───────────────────────────
+                        if edit_items:
+                            st.markdown(
+                                "<div style='font-size:0.8rem;color:var(--text-muted);"
+                                "text-transform:uppercase;letter-spacing:0.8px;"
+                                "margin-bottom:6px'>Current Items</div>",
+                                unsafe_allow_html=True,
+                            )
+                            for i, item in enumerate(edit_items):
+                                rc1, rc2, rc3, rc4 = st.columns([3, 2, 2, 1])
+                                with rc1:
+                                    st.markdown(
+                                        f"<div style='padding:0.4rem 0;font-size:0.92rem;"
+                                        f"color:var(--text-primary);font-weight:500'>"
+                                        f"{item['product']}</div>",
+                                        unsafe_allow_html=True,
+                                    )
+                                with rc2:
+                                    st.markdown(
+                                        f"<div style='padding:0.4rem 0;font-size:0.88rem;"
+                                        f"color:var(--text-secondary)'>{item['quantity']}</div>",
+                                        unsafe_allow_html=True,
+                                    )
+                                with rc3:
+                                    st.markdown(
+                                        f"<div style='padding:0.4rem 0;font-size:0.88rem;"
+                                        f"color:var(--accent)'>₹{item['subtotal']:.2f}</div>",
+                                        unsafe_allow_html=True,
+                                    )
+                                with rc4:
+                                    st.markdown('<div class="remove-item-btn">', unsafe_allow_html=True)
+                                    if st.button("✕", key=f"remove_{orig_idx}_{i}"):
+                                        st.session_state.edit_items.pop(i)
+                                        st.rerun()
+                                    st.markdown("</div>", unsafe_allow_html=True)
+                        else:
+                            st.markdown(
+                                "<small style='color:var(--text-muted)'>No items left — "
+                                "add one below or cancel.</small>",
+                                unsafe_allow_html=True,
+                            )
+
+                        st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+
+                        # ── Add item from inventory ─────────────────────────
+                        st.markdown(
+                            "<div style='font-size:0.8rem;color:var(--text-muted);"
+                            "text-transform:uppercase;letter-spacing:0.8px;"
+                            "margin-bottom:6px'>Add Item</div>",
+                            unsafe_allow_html=True,
+                        )
+                        all_inv_items = inv["item_name"].tolist()
+                        ac1, ac2, ac3, ac4 = st.columns([3, 2, 2, 2])
+                        with ac1:
+                            add_item_name = st.selectbox(
+                                "Item",
+                                ["— select —"] + all_inv_items,
+                                key=f"add_item_sel_{orig_idx}",
+                                label_visibility="collapsed",
+                            )
+                        is_pulse_add = False
+                        add_item_price = 0.0
+                        if add_item_name != "— select —":
+                            inv_row = inv[inv["item_name"] == add_item_name].iloc[0]
+                            add_item_price = float(inv_row["price"])
+                            is_pulse_add   = inv_row["category"] == "Pulses"
+
+                        with ac2:
+                            if is_pulse_add:
+                                add_unit = st.radio(
+                                    "Unit", ["kg", "g"],
+                                    key=f"add_unit_{orig_idx}",
+                                    horizontal=True,
+                                    label_visibility="collapsed",
+                                )
+                            else:
+                                add_unit = "units"
+                                st.markdown(
+                                    "<div style='padding:0.45rem 0;color:var(--text-muted);"
+                                    "font-size:0.85rem'>units</div>",
+                                    unsafe_allow_html=True,
+                                )
+                        with ac3:
+                            if is_pulse_add and add_unit == "kg":
+                                add_qty = st.number_input(
+                                    "Qty", min_value=0.1, max_value=20.0, step=0.1,
+                                    value=0.5, key=f"add_qty_{orig_idx}_kg",
+                                    label_visibility="collapsed",
+                                )
+                                add_qty_kg  = add_qty
+                                add_display = f"{add_qty}kg"
+                            elif is_pulse_add and add_unit == "g":
+                                add_qty = st.number_input(
+                                    "Qty", min_value=50, max_value=950, step=50,
+                                    value=500, key=f"add_qty_{orig_idx}_g",
+                                    label_visibility="collapsed",
+                                )
+                                add_qty_kg  = add_qty / 1000
+                                add_display = f"{add_qty}g"
+                            else:
+                                add_qty = st.number_input(
+                                    "Qty", min_value=1, max_value=50, step=1,
+                                    value=1, key=f"add_qty_{orig_idx}_u",
+                                    label_visibility="collapsed",
+                                )
+                                add_qty_kg  = add_qty
+                                add_display = f"{add_qty} units"
+
+                        add_subtotal = round(add_qty_kg * add_item_price, 2)
+                        with ac4:
+                            st.markdown('<div class="inv-add-btn">', unsafe_allow_html=True)
+                            if st.button(f"＋ Add  ₹{add_subtotal}", key=f"do_add_{orig_idx}"):
+                                if add_item_name == "— select —":
+                                    st.toast("Please select an item first.", icon="⚠️")
+                                else:
+                                    st.session_state.edit_items.append({
+                                        "product":  add_item_name,
+                                        "quantity": add_display,
+                                        "rate":     add_item_price,
+                                        "subtotal": add_subtotal,
+                                    })
+                                    st.rerun()
+                            st.markdown("</div>", unsafe_allow_html=True)
+
+                        st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+
+                        # ── New running total ───────────────────────────────
+                        new_total = round(sum(x["subtotal"] for x in st.session_state.edit_items), 2)
+                        st.markdown(
+                            f"<div class='edit-total-row'>"
+                            f"<span style='color:var(--text-secondary)'>Updated Total</span>"
+                            f"<span style='color:var(--accent);font-weight:800;font-size:1.1rem'>"
+                            f"₹{new_total}</span></div>",
+                            unsafe_allow_html=True,
+                        )
+
+                        st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+
+                        # ── Save / Cancel ───────────────────────────────────
+                        sc1, sc2 = st.columns(2)
+                        with sc1:
+                            st.markdown('<div class="confirm-btn">', unsafe_allow_html=True)
+                            if st.button("💾 Save Changes", key=f"save_edit_{orig_idx}", use_container_width=True):
+                                if not st.session_state.edit_items:
+                                    st.error("Order must have at least one item.")
+                                else:
+                                    # Rebuild items string
+                                    new_items_str = ", ".join(
+                                        f"{ei['quantity']} {ei['product']} (@ ₹{ei['rate']})"
+                                        for ei in st.session_state.edit_items
+                                    )
+                                    all_orders = load_orders()
+                                    all_orders.at[orig_idx, "Items"] = new_items_str
+                                    all_orders.at[orig_idx, "Total"] = new_total
+                                    all_orders.to_csv(ORDERS_FILE, index=False)
+                                    st.session_state.editing_order_idx = None
+                                    st.session_state.edit_items        = []
+                                    st.success("✅ Order updated successfully!")
+                                    st.rerun()
+                            st.markdown("</div>", unsafe_allow_html=True)
+                        with sc2:
+                            st.markdown('<div class="clear-btn">', unsafe_allow_html=True)
+                            if st.button("✕ Cancel", key=f"cancel_edit_{orig_idx}", use_container_width=True):
+                                st.session_state.editing_order_idx = None
+                                st.session_state.edit_items        = []
+                                st.rerun()
+                            st.markdown("</div>", unsafe_allow_html=True)
+
+                        st.markdown("</div>", unsafe_allow_html=True)  # close edit-panel
 
     # ── Inventory tab ──────────────────────────────────────────────────────────
     with tab_inventory:
