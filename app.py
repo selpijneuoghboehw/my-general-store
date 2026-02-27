@@ -109,6 +109,8 @@ def init_state():
         "pin_message":        "",        # feedback message below dots
         "editing_order_idx":  None,      # original CSV row index being edited
         "edit_items":         [],        # list of parsed item dicts for that order
+        "cust_search":        "",        # customer search bar query
+        "owner_search":       "",        # owner search bar query
     }
     for key, val in defaults.items():
         if key not in st.session_state:
@@ -405,6 +407,27 @@ def inject_css():
 
     .stCaption, small { color: var(--text-muted) !important; }
     [data-testid="stToast"] { background: var(--bg-elevated) !important; border: 1px solid var(--border-accent) !important; border-radius: 12px !important; color: var(--text-primary) !important; }
+
+    /* ── Search Bar ──────────────────── */
+    .search-wrap {
+        position: relative;
+        margin-bottom: 1.1rem;
+    }
+    .search-wrap input {
+        background: var(--bg-card) !important;
+        border: 1.5px solid var(--border) !important;
+        border-radius: 14px !important;
+        color: var(--text-primary) !important;
+        font-size: 1rem !important;
+        padding: 0.7rem 1rem 0.7rem 1rem !important;
+        transition: border-color .2s, box-shadow .2s !important;
+        width: 100% !important;
+    }
+    .search-wrap input:focus {
+        border-color: var(--accent) !important;
+        box-shadow: 0 0 0 3px var(--accent-glow2) !important;
+    }
+    .search-wrap input::placeholder { color: var(--text-muted) !important; }
 
     /* ── Order Edit Panel ────────────── */
     .edit-panel {
@@ -816,6 +839,76 @@ def pin_lock_screen() -> bool:
 
     return False
 
+# ─── Shared item renderer (used in both customer + owner views) ────────────────
+
+def render_item_row(row, inventory, key_prefix: str, is_cart: bool = True):
+    """Renders one item card with qty controls and add button.
+    If is_cart=True, appends to st.session_state.cart.
+    If is_cart=False, appends to st.session_state.edit_items.
+    """
+    item_name  = str(row["item_name"])
+    item_price = float(row["price"])
+    is_pulse   = str(row["category"]) == "Pulses"
+    unit_label = "per kg" if is_pulse else "per unit"
+
+    st.markdown(f"""
+    <div class="item-card">
+        <div class="item-card-header">
+            <span class="item-name">{item_name}</span>
+            <span class="item-price-tag">₹{item_price:.0f} {unit_label}</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    if is_pulse:
+        c1, c2, c3, c4 = st.columns([2, 2, 2, 2])
+        with c1:
+            unit = st.radio("Unit", ["kg", "g"], key=f"{key_prefix}_unit_{item_name}", horizontal=True, label_visibility="collapsed")
+        with c2:
+            if unit == "kg":
+                qty_val     = st.number_input("Qty", min_value=0.1, max_value=20.0, step=0.1, value=0.5, key=f"{key_prefix}_qty_{item_name}_kg", label_visibility="collapsed")
+                qty_kg      = qty_val
+                display_str = f"{qty_val}kg"
+            else:
+                qty_val     = st.number_input("Qty", min_value=50, max_value=950, step=50, value=500, key=f"{key_prefix}_qty_{item_name}_g", label_visibility="collapsed")
+                qty_kg      = qty_val / 1000
+                display_str = f"{qty_val}g"
+        with c3:
+            amount = round(qty_kg * item_price, 2)
+            st.markdown(f"<div style='padding:0.5rem 0;color:#9AA0B8;font-size:0.88rem;'>= <span style='color:#F5A623;font-weight:700;font-size:1rem;'>₹{amount}</span></div>", unsafe_allow_html=True)
+        with c4:
+            st.markdown('<div class="add-btn">', unsafe_allow_html=True)
+            if st.button("＋ Add", key=f"{key_prefix}_add_{item_name}", use_container_width=True):
+                if is_cart:
+                    st.session_state.cart.append({"item": item_name, "price": item_price, "qty_kg": qty_kg, "display": display_str, "amount": amount})
+                    st.toast(f"✅ {display_str} of {item_name} added!")
+                else:
+                    st.session_state.edit_items.append({"product": item_name, "quantity": display_str, "rate": item_price, "subtotal": amount})
+                    st.toast(f"✅ {display_str} of {item_name} added to order!")
+                st.rerun()
+            st.markdown("</div>", unsafe_allow_html=True)
+    else:
+        c1, c2, c3 = st.columns([3, 2, 2])
+        with c1:
+            qty_units   = st.number_input("Units", min_value=1, max_value=50, step=1, value=1, key=f"{key_prefix}_qty_{item_name}_units", label_visibility="collapsed")
+            display_str = f"{qty_units} units"
+        with c2:
+            amount = round(qty_units * item_price, 2)
+            st.markdown(f"<div style='padding:0.5rem 0;color:#9AA0B8;font-size:0.88rem;'>= <span style='color:#F5A623;font-weight:700;font-size:1rem;'>₹{amount}</span></div>", unsafe_allow_html=True)
+        with c3:
+            st.markdown('<div class="add-btn">', unsafe_allow_html=True)
+            if st.button("＋ Add", key=f"{key_prefix}_add_{item_name}", use_container_width=True):
+                if is_cart:
+                    st.session_state.cart.append({"item": item_name, "price": item_price, "qty_kg": qty_units, "display": display_str, "amount": amount})
+                    st.toast(f"✅ {qty_units} × {item_name} added!")
+                else:
+                    st.session_state.edit_items.append({"product": item_name, "quantity": display_str, "rate": item_price, "subtotal": amount})
+                    st.toast(f"✅ {qty_units} × {item_name} added to order!")
+                st.rerun()
+            st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+
 # ─── Customer view ─────────────────────────────────────────────────────────────
 
 def customer_view(inventory: pd.DataFrame):
@@ -841,98 +934,70 @@ def customer_view(inventory: pd.DataFrame):
 
     categories = sorted(inventory["category"].dropna().astype(str).unique().tolist())
 
-    # ── Category grid ──────────────────────────────────────────────────────────
-    if st.session_state.selected_category is None:
-        st.markdown('<div class="section-label">Browse Categories</div>', unsafe_allow_html=True)
-        if not categories:
-            st.info("No inventory items found. Ask the owner to add items.")
-            return
-        cols = st.columns(min(4, len(categories)))
-        for idx, cat in enumerate(categories):
-            icon     = CAT_ICONS.get(cat, "📦")
-            item_cnt = len(inventory[inventory["category"] == cat])
-            with cols[idx % len(cols)]:
-                st.markdown(f"""
-                <div class="cat-card">
-                    <div class="cat-icon">{icon}</div>
-                    <div class="cat-name">{cat}</div>
-                    <div class="cat-count">{item_cnt} items</div>
-                </div>
-                """, unsafe_allow_html=True)
-                if st.button("Shop →", key=f"cat_{cat}", use_container_width=True):
-                    st.session_state.selected_category = cat
-                    st.rerun()
+    # ── Search bar ─────────────────────────────────────────────────────────────
+    st.markdown('<div class="search-wrap">', unsafe_allow_html=True)
+    search_query = st.text_input(
+        "Search",
+        placeholder="🔍  Search items e.g. Rice, Soap, Dal…",
+        key="cust_search_input",
+        label_visibility="collapsed",
+    )
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    # ── Item listing ───────────────────────────────────────────────────────────
+    # ── SEARCH RESULTS mode ────────────────────────────────────────────────────
+    if search_query.strip():
+        q = search_query.strip().lower()
+        matched = inventory[inventory["item_name"].str.lower().str.contains(q, na=False)]
+        st.markdown(
+            f'<div class="section-label">🔍 Results for "{search_query.strip()}"</div>',
+            unsafe_allow_html=True,
+        )
+        if matched.empty:
+            st.markdown(f"<small>No items match <b>'{search_query.strip()}'</b>. Try a different word.</small>", unsafe_allow_html=True)
+        else:
+            for _, row in matched.reset_index(drop=True).iterrows():
+                render_item_row(row, inventory, key_prefix="cust_srch", is_cart=True)
+
+    # ── BROWSE mode: category grid + item listing ──────────────────────────────
     else:
-        cat      = st.session_state.selected_category
-        icon     = CAT_ICONS.get(cat, "📦")
-        is_pulse = (cat == "Pulses")
+        if st.session_state.selected_category is None:
+            st.markdown('<div class="section-label">Browse Categories</div>', unsafe_allow_html=True)
+            if not categories:
+                st.info("No inventory items found. Ask the owner to add items.")
+                return
+            cols = st.columns(min(4, len(categories)))
+            for idx, cat in enumerate(categories):
+                icon     = CAT_ICONS.get(cat, "📦")
+                item_cnt = len(inventory[inventory["category"] == cat])
+                with cols[idx % len(cols)]:
+                    st.markdown(f"""
+                    <div class="cat-card">
+                        <div class="cat-icon">{icon}</div>
+                        <div class="cat-name">{cat}</div>
+                        <div class="cat-count">{item_cnt} items</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    if st.button("Shop →", key=f"cat_{cat}", use_container_width=True):
+                        st.session_state.selected_category = cat
+                        st.rerun()
 
-        top_l, top_r = st.columns([1, 7])
-        with top_l:
-            st.markdown('<div class="back-btn">', unsafe_allow_html=True)
-            if st.button("← Back", key="back_btn"):
-                st.session_state.selected_category = None
-                st.rerun()
-            st.markdown("</div>", unsafe_allow_html=True)
-        with top_r:
-            st.markdown(f'<div class="section-label">{icon} {cat}</div>', unsafe_allow_html=True)
+        else:
+            cat      = st.session_state.selected_category
+            icon     = CAT_ICONS.get(cat, "📦")
 
-        cat_items = inventory[inventory["category"] == cat].reset_index(drop=True)
+            top_l, top_r = st.columns([1, 7])
+            with top_l:
+                st.markdown('<div class="back-btn">', unsafe_allow_html=True)
+                if st.button("← Back", key="back_btn"):
+                    st.session_state.selected_category = None
+                    st.rerun()
+                st.markdown("</div>", unsafe_allow_html=True)
+            with top_r:
+                st.markdown(f'<div class="section-label">{icon} {cat}</div>', unsafe_allow_html=True)
 
-        for _, row in cat_items.iterrows():
-            item_name  = str(row["item_name"])
-            item_price = float(row["price"])
-            unit_label = "per kg" if is_pulse else "per unit"
-
-            st.markdown(f"""
-            <div class="item-card">
-                <div class="item-card-header">
-                    <span class="item-name">{item_name}</span>
-                    <span class="item-price-tag">₹{item_price:.0f} {unit_label}</span>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-            if is_pulse:
-                c1, c2, c3, c4 = st.columns([2, 2, 2, 2])
-                with c1:
-                    unit = st.radio("Unit", ["kg", "g"], key=f"unit_{item_name}", horizontal=True, label_visibility="collapsed")
-                with c2:
-                    if unit == "kg":
-                        qty_val     = st.number_input("Qty", min_value=0.1, max_value=20.0, step=0.1, value=0.5, key=f"qty_{item_name}_kg", label_visibility="collapsed")
-                        qty_kg      = qty_val
-                        display_str = f"{qty_val}kg"
-                    else:
-                        qty_val     = st.number_input("Qty", min_value=50, max_value=950, step=50, value=500, key=f"qty_{item_name}_g", label_visibility="collapsed")
-                        qty_kg      = qty_val / 1000
-                        display_str = f"{qty_val}g"
-                with c3:
-                    amount = round(qty_kg * item_price, 2)
-                    st.markdown(f"<div style='padding:0.5rem 0;color:#9AA0B8;font-size:0.88rem;'>= <span style='color:#F5A623;font-weight:700;font-size:1rem;'>₹{amount}</span></div>", unsafe_allow_html=True)
-                with c4:
-                    st.markdown('<div class="add-btn">', unsafe_allow_html=True)
-                    if st.button("＋ Add to Cart", key=f"add_{item_name}", use_container_width=True):
-                        st.session_state.cart.append({"item": item_name, "price": item_price, "qty_kg": qty_kg, "display": display_str, "amount": amount})
-                        st.toast(f"✅ {display_str} of {item_name} added!")
-                    st.markdown("</div>", unsafe_allow_html=True)
-            else:
-                c1, c2, c3 = st.columns([3, 2, 2])
-                with c1:
-                    qty_units   = st.number_input("Units", min_value=1, max_value=50, step=1, value=1, key=f"qty_{item_name}_units", label_visibility="collapsed")
-                    display_str = f"{qty_units} units"
-                with c2:
-                    amount = round(qty_units * item_price, 2)
-                    st.markdown(f"<div style='padding:0.5rem 0;color:#9AA0B8;font-size:0.88rem;'>= <span style='color:#F5A623;font-weight:700;font-size:1rem;'>₹{amount}</span></div>", unsafe_allow_html=True)
-                with c3:
-                    st.markdown('<div class="add-btn">', unsafe_allow_html=True)
-                    if st.button("＋ Add to Cart", key=f"add_{item_name}", use_container_width=True):
-                        st.session_state.cart.append({"item": item_name, "price": item_price, "qty_kg": qty_units, "display": display_str, "amount": amount})
-                        st.toast(f"✅ {qty_units} × {item_name} added!")
-                    st.markdown("</div>", unsafe_allow_html=True)
-
-            st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+            cat_items = inventory[inventory["category"] == cat].reset_index(drop=True)
+            for _, row in cat_items.iterrows():
+                render_item_row(row, inventory, key_prefix="cust_browse", is_cart=True)
 
     # ── Cart ───────────────────────────────────────────────────────────────────
     st.markdown("---")
@@ -1325,85 +1390,35 @@ def owner_view():
 
                         st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
 
-                        # ── Add item from inventory ─────────────────────────
+                        # ── Search bar to add item ─────────────────────────
                         st.markdown(
                             "<div style='font-size:0.8rem;color:var(--text-muted);"
                             "text-transform:uppercase;letter-spacing:0.8px;"
-                            "margin-bottom:6px'>Add Item</div>",
+                            "margin-bottom:6px'>Search & Add Item</div>",
                             unsafe_allow_html=True,
                         )
-                        all_inv_items = inv["item_name"].tolist()
-                        ac1, ac2, ac3, ac4 = st.columns([3, 2, 2, 2])
-                        with ac1:
-                            add_item_name = st.selectbox(
-                                "Item",
-                                ["— select —"] + all_inv_items,
-                                key=f"add_item_sel_{orig_idx}",
-                                label_visibility="collapsed",
+                        st.markdown('<div class="search-wrap">', unsafe_allow_html=True)
+                        owner_srch = st.text_input(
+                            "Search item",
+                            placeholder="🔍  Type item name e.g. Rice, Soap…",
+                            key=f"owner_srch_{orig_idx}",
+                            label_visibility="collapsed",
+                        )
+                        st.markdown("</div>", unsafe_allow_html=True)
+
+                        if owner_srch.strip():
+                            q_own = owner_srch.strip().lower()
+                            matched_own = inv[inv["item_name"].str.lower().str.contains(q_own, na=False)]
+                            if matched_own.empty:
+                                st.markdown(f"<small style='color:var(--text-muted)'>No items match '{owner_srch.strip()}'.</small>", unsafe_allow_html=True)
+                            else:
+                                for _, mrow in matched_own.reset_index(drop=True).iterrows():
+                                    render_item_row(mrow, inv, key_prefix=f"own_edit_{orig_idx}", is_cart=False)
+                        else:
+                            st.markdown(
+                                "<small style='color:var(--text-muted)'>Start typing an item name above to find and add it.</small>",
+                                unsafe_allow_html=True,
                             )
-                        is_pulse_add = False
-                        add_item_price = 0.0
-                        if add_item_name != "— select —":
-                            inv_row = inv[inv["item_name"] == add_item_name].iloc[0]
-                            add_item_price = float(inv_row["price"])
-                            is_pulse_add   = inv_row["category"] == "Pulses"
-
-                        with ac2:
-                            if is_pulse_add:
-                                add_unit = st.radio(
-                                    "Unit", ["kg", "g"],
-                                    key=f"add_unit_{orig_idx}",
-                                    horizontal=True,
-                                    label_visibility="collapsed",
-                                )
-                            else:
-                                add_unit = "units"
-                                st.markdown(
-                                    "<div style='padding:0.45rem 0;color:var(--text-muted);"
-                                    "font-size:0.85rem'>units</div>",
-                                    unsafe_allow_html=True,
-                                )
-                        with ac3:
-                            if is_pulse_add and add_unit == "kg":
-                                add_qty = st.number_input(
-                                    "Qty", min_value=0.1, max_value=20.0, step=0.1,
-                                    value=0.5, key=f"add_qty_{orig_idx}_kg",
-                                    label_visibility="collapsed",
-                                )
-                                add_qty_kg  = add_qty
-                                add_display = f"{add_qty}kg"
-                            elif is_pulse_add and add_unit == "g":
-                                add_qty = st.number_input(
-                                    "Qty", min_value=50, max_value=950, step=50,
-                                    value=500, key=f"add_qty_{orig_idx}_g",
-                                    label_visibility="collapsed",
-                                )
-                                add_qty_kg  = add_qty / 1000
-                                add_display = f"{add_qty}g"
-                            else:
-                                add_qty = st.number_input(
-                                    "Qty", min_value=1, max_value=50, step=1,
-                                    value=1, key=f"add_qty_{orig_idx}_u",
-                                    label_visibility="collapsed",
-                                )
-                                add_qty_kg  = add_qty
-                                add_display = f"{add_qty} units"
-
-                        add_subtotal = round(add_qty_kg * add_item_price, 2)
-                        with ac4:
-                            st.markdown('<div class="inv-add-btn">', unsafe_allow_html=True)
-                            if st.button(f"＋ Add  ₹{add_subtotal}", key=f"do_add_{orig_idx}"):
-                                if add_item_name == "— select —":
-                                    st.toast("Please select an item first.", icon="⚠️")
-                                else:
-                                    st.session_state.edit_items.append({
-                                        "product":  add_item_name,
-                                        "quantity": add_display,
-                                        "rate":     add_item_price,
-                                        "subtotal": add_subtotal,
-                                    })
-                                    st.rerun()
-                            st.markdown("</div>", unsafe_allow_html=True)
 
                         st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
