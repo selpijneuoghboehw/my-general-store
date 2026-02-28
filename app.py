@@ -16,7 +16,7 @@ INVENTORY_FILE  = "inventory.csv"
 ORDERS_FILE     = "orders.csv"
 ORDERS_COLS     = ["Time", "Customer", "Items", "Total"]
 
-OWNER_PIN       = "1234"        # ← Change this to your preferred PIN
+OWNER_PIN       = "1969"        # ← Change this to your preferred PIN
 MAX_ATTEMPTS    = 5             # Wrong attempts before lockout
 LOCKOUT_SECONDS = 30            # Lockout duration in seconds
 
@@ -1487,7 +1487,7 @@ def main():
     <div class="store-header">
         <h1>🏪 Sanjay Karyana Store</h1>
         <p>Fresh &nbsp;·&nbsp; Trusted &nbsp;·&nbsp; Local</p>
-        <div class="badge">EST. 1985 &nbsp;·&nbsp; SHIMLA</div>
+        <div class="badge">EST. 2015 &nbsp;·&nbsp; MASHKA</div>
     </div>
     """, unsafe_allow_html=True)
 
