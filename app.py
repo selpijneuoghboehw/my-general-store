@@ -312,16 +312,21 @@ def inject_css():
         font-weight: 500 !important;
     }
 
-    .add-btn .stButton > button {
-        background: var(--bg-elevated) !important;
-        border: 1px solid var(--border-accent) !important;
-        color: var(--accent) !important;
-        font-weight: 600 !important; font-size: 0.88rem !important;
-        width: 100% !important; padding: 0.45rem 0.8rem !important;
+   .add-btn .stButton > button {
+        background: #F5A623 !important;
+        border: none !important;
+        color: #0D0F14 !important;
+        font-weight: 700 !important;
+        font-size: 0.88rem !important;
+        width: 100% !important;
+        padding: 0.45rem 0.8rem !important;
+        box-shadow: 0 3px 10px rgba(245,166,35,0.4) !important;
     }
     .add-btn .stButton > button:hover {
-        background: var(--accent) !important; color: var(--bg-base) !important;
-        box-shadow: 0 4px 14px rgba(245,166,35,0.3) !important;
+        background: #C4811A !important;
+        color: #0D0F14 !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 6px 18px rgba(245,166,35,0.55) !important;
     }
 
     .back-btn .stButton > button {
